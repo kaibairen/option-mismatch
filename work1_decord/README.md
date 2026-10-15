@@ -25,7 +25,7 @@ Deepseek-v3 在 Table 1 印出的 DCDI 是 15.93%。按公式 `(0.6181 - 0.5629)
 ## 用法
 
 ```bash
-cd decord
+cd work1_decord
 python -m pytest
 python -m decord
 python -m decord --log runs/decord_standard.jsonl --n-full 250
@@ -33,4 +33,4 @@ python -m decord --log runs/decord_standard.jsonl --n-full 250
 
 新跑出来的 JSONL 每一行要有 `status`（`ok`、`empty`、`no_letter`、`error`）和 `correct`。`summarize_predictions` 同时给全量准确率、有效准确率和失败计数。
 
-这个目录准备放到 [github.com/kaibairen/DecoRD](https://github.com/kaibairen/DecoRD)。写代码时该地址返回 404，创建仓库的请求被 GitHub 限流，所以先放在本分支。
+工作一的代码和归档表都在这个目录。

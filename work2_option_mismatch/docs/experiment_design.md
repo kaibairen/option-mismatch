@@ -242,14 +242,14 @@ $$
 | `/` 30 GB | 不放权重 |
 | `/root/autodl-tmp` 50 GB | 模型、HF/MS 缓存、结果 |
 | 网络 | 只走 ModelScope，不走 Hugging Face |
-| 运行目录 | `/root/autodl-tmp/option-mismatch-finetuning` |
+| 运行目录 | `/root/autodl-tmp/option-mismatch-finetuning/work2_option_mismatch` |
 
 目录约定：
 
 ```text
 /root/autodl-tmp/
   models/Qwen2.5-*-Instruct/
-  option-mismatch-finetuning/
+  option-mismatch-finetuning/work2_option_mismatch/
     data/processed/{aqua,mathqa}_train_100.jsonl
     results/generations/
     results/probes/
