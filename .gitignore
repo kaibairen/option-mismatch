@@ -12,7 +12,6 @@ __pycache__/
 *$py.class
 .venv/
 venv/
-.env/
 *.egg-info/
 .pytest_cache/
 .mypy_cache/
@@ -30,14 +29,6 @@ wandb/
 *.pt
 *.bin
 *.safetensors
-
-# Data (keep a tiny fixture if added later)
-data/raw/
-data/processed/
-!data/.gitkeep
-
-# Keep frozen metrics; ignore ad-hoc report drafts
-reports/**/*.md
 
 # OS / IDE
 .DS_Store

@@ -1,0 +1,9 @@
+[project]
+name = "decord"
+version = "0.1.0"
+description = "Decoupled reasoning and decision for multiple-choice questions"
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

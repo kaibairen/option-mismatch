@@ -1,0 +1,14 @@
+{
+  "temperature": 0.4,
+  "top_p": 1.0,
+  "max_tokens": 512,
+  "sample_k": 5,
+  "confidence_threshold": 0.5,
+  "request_timeout_s": 180,
+  "notes": {
+    "temperature_top_p_max_tokens": "AAAI manuscript experiment settings.",
+    "confidence_threshold": "Figure 5 treats a score below 0.5 as diffident.",
+    "sample_k": "The manuscript writes Sample N and does not fix N. 5 is the package default.",
+    "request_timeout_s": "Not in the manuscript. Replaces the 20 second session timeout in the earlier evaluate.py."
+  }
+}
