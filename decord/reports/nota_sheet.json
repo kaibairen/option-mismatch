@@ -1,0 +1,486 @@
+{
+  "provenance": "Uploaded data.xlsx. Columns are BASELINE, NA_ANSWER, NA_DISTRACTOR. Percent points as printed. Empty cells are null. This sheet is not Table 2 or Table 3 of the AAAI manuscript.",
+  "recomputed": false,
+  "cells": [
+    {
+      "dataset": "AQUA",
+      "model": "Qwen-3-8B",
+      "method": "CoT( Direct )",
+      "baseline": 43.31,
+      "na_answer": 35.03,
+      "na_distractor": 42.91
+    },
+    {
+      "dataset": "AQUA",
+      "model": "Qwen-3-8B",
+      "method": "CoT( Double Step )",
+      "baseline": 69.29,
+      "na_answer": 51.18,
+      "na_distractor": 60.23
+    },
+    {
+      "dataset": "AQUA",
+      "model": "Qwen-3-8B",
+      "method": "DecoRD",
+      "baseline": 79.38,
+      "na_answer": 76.38,
+      "na_distractor": 73.62
+    },
+    {
+      "dataset": "AQUA",
+      "model": "GPT-3.5-turbo",
+      "method": "CoT( Direct )",
+      "baseline": 38.98,
+      "na_answer": 15.75,
+      "na_distractor": 42.51
+    },
+    {
+      "dataset": "AQUA",
+      "model": "GPT-3.5-turbo",
+      "method": "CoT( Double Step )",
+      "baseline": 79.13,
+      "na_answer": 74.09,
+      "na_distractor": 79.52
+    },
+    {
+      "dataset": "AQUA",
+      "model": "GPT-3.5-turbo",
+      "method": "DecoRD",
+      "baseline": 85.43,
+      "na_answer": 73.23,
+      "na_distractor": 83.46
+    },
+    {
+      "dataset": "AQUA",
+      "model": "Deepseek-V3.2",
+      "method": "CoT( Direct )",
+      "baseline": 75.98,
+      "na_answer": 62.21,
+      "na_distractor": 74.41
+    },
+    {
+      "dataset": "AQUA",
+      "model": "Deepseek-V3.2",
+      "method": "CoT( Double Step )",
+      "baseline": 81.5,
+      "na_answer": 75.2,
+      "na_distractor": 84.65
+    },
+    {
+      "dataset": "AQUA",
+      "model": "Deepseek-V3.2",
+      "method": "DecoRD",
+      "baseline": 87.4,
+      "na_answer": 88.19,
+      "na_distractor": 79.13
+    },
+    {
+      "dataset": "AQUA",
+      "model": "GPT-4",
+      "method": "CoT( Direct )",
+      "baseline": 35.43,
+      "na_answer": 20.07,
+      "na_distractor": 40.9
+    },
+    {
+      "dataset": "AQUA",
+      "model": "GPT-4",
+      "method": "CoT( Double Step )",
+      "baseline": 75.2,
+      "na_answer": 73.6,
+      "na_distractor": 71.25
+    },
+    {
+      "dataset": "AQUA",
+      "model": "GPT-4",
+      "method": "DecoRD",
+      "baseline": 77.17,
+      "na_answer": 79.92,
+      "na_distractor": 72.83
+    },
+    {
+      "dataset": "MMLU-STEM",
+      "model": "Qwen3-8B",
+      "method": "CoT( Direct )",
+      "baseline": 69.56,
+      "na_answer": 29.31,
+      "na_distractor": 61.9
+    },
+    {
+      "dataset": "MMLU-STEM",
+      "model": "Qwen3-8B",
+      "method": "CoT( Double Step )",
+      "baseline": 73.23,
+      "na_answer": 55.51,
+      "na_distractor": 73.62
+    },
+    {
+      "dataset": "MMLU-STEM",
+      "model": "Qwen3-8B",
+      "method": "DecoRD",
+      "baseline": 79.13,
+      "na_answer": 70.87,
+      "na_distractor": 75.59
+    },
+    {
+      "dataset": "MMLU-STEM",
+      "model": "Deepseek-V3.2",
+      "method": "CoT( Direct )",
+      "baseline": 81.63,
+      "na_answer": 40.65,
+      "na_distractor": 79.76
+    },
+    {
+      "dataset": "MMLU-STEM",
+      "model": "Deepseek-V3.2",
+      "method": "CoT( Double Step )",
+      "baseline": 86.22,
+      "na_answer": 69.69,
+      "na_distractor": 81.5
+    },
+    {
+      "dataset": "MMLU-STEM",
+      "model": "Deepseek-V3.2",
+      "method": "DecoRD",
+      "baseline": 87.4,
+      "na_answer": 75.2,
+      "na_distractor": 85.83
+    },
+    {
+      "dataset": "MMLU-STEM",
+      "model": "GPT-3.5-turbo",
+      "method": "CoT( Direct )",
+      "baseline": 48.82,
+      "na_answer": 17.32,
+      "na_distractor": 52.36
+    },
+    {
+      "dataset": "MMLU-STEM",
+      "model": "GPT-3.5-turbo",
+      "method": "CoT( Double Step )",
+      "baseline": 82.28,
+      "na_answer": 38.58,
+      "na_distractor": 80.71
+    },
+    {
+      "dataset": "MMLU-STEM",
+      "model": "GPT-3.5-turbo",
+      "method": "DecoRD",
+      "baseline": 90.55,
+      "na_answer": 60.63,
+      "na_distractor": 89.76
+    },
+    {
+      "dataset": "MMLU-STEM",
+      "model": "GPT-4",
+      "method": "CoT( Direct )",
+      "baseline": 70.87,
+      "na_answer": 30.71,
+      "na_distractor": 69.69
+    },
+    {
+      "dataset": "MMLU-STEM",
+      "model": "GPT-4",
+      "method": "CoT( Double Step )",
+      "baseline": 79.13,
+      "na_answer": 61.81,
+      "na_distractor": 68.11
+    },
+    {
+      "dataset": "MMLU-STEM",
+      "model": "GPT-4",
+      "method": "DecoRD",
+      "baseline": 81.1,
+      "na_answer": 62.2,
+      "na_distractor": 74.02
+    },
+    {
+      "dataset": "MMLU-HUMAN",
+      "model": "Qwen3-8B",
+      "method": "CoT( Direct )",
+      "baseline": 59.01,
+      "na_answer": 19.38,
+      "na_distractor": 54.21
+    },
+    {
+      "dataset": "MMLU-HUMAN",
+      "model": "Qwen3-8B",
+      "method": "CoT( Double Step )",
+      "baseline": 64.96,
+      "na_answer": 32.28,
+      "na_distractor": 58.26
+    },
+    {
+      "dataset": "MMLU-HUMAN",
+      "model": "Qwen3-8B",
+      "method": "DecoRD",
+      "baseline": 61.02,
+      "na_answer": 40.94,
+      "na_distractor": 60.24
+    },
+    {
+      "dataset": "MMLU-HUMAN",
+      "model": "Deepseek-V3.2",
+      "method": "CoT( Direct )",
+      "baseline": 73.81,
+      "na_answer": 38.1,
+      "na_distractor": 72.45
+    },
+    {
+      "dataset": "MMLU-HUMAN",
+      "model": "Deepseek-V3.2",
+      "method": "CoT( Double Step )",
+      "baseline": 87.01,
+      "na_answer": 56.69,
+      "na_distractor": 87.01
+    },
+    {
+      "dataset": "MMLU-HUMAN",
+      "model": "Deepseek-V3.2",
+      "method": "DecoRD",
+      "baseline": 86.22,
+      "na_answer": null,
+      "na_distractor": null
+    },
+    {
+      "dataset": "MMLU-HUMAN",
+      "model": "GPT-3.5-turbo",
+      "method": "CoT( Direct )",
+      "baseline": 55.12,
+      "na_answer": 18.9,
+      "na_distractor": 51.57
+    },
+    {
+      "dataset": "MMLU-HUMAN",
+      "model": "GPT-3.5-turbo",
+      "method": "CoT( Double Step )",
+      "baseline": 67.32,
+      "na_answer": 24.41,
+      "na_distractor": 68.9
+    },
+    {
+      "dataset": "MMLU-HUMAN",
+      "model": "GPT-3.5-turbo",
+      "method": "DecoRD",
+      "baseline": 76.38,
+      "na_answer": 37.01,
+      "na_distractor": 75.59
+    },
+    {
+      "dataset": "MMLU-HUMAN",
+      "model": "GPT-4",
+      "method": "CoT( Direct )",
+      "baseline": 69.29,
+      "na_answer": 23.62,
+      "na_distractor": 71.26
+    },
+    {
+      "dataset": "MMLU-HUMAN",
+      "model": "GPT-4",
+      "method": "CoT( Double Step )",
+      "baseline": 74.41,
+      "na_answer": 34.22,
+      "na_distractor": 76.38
+    },
+    {
+      "dataset": "MMLU-HUMAN",
+      "model": "GPT-4",
+      "method": "DecoRD",
+      "baseline": null,
+      "na_answer": null,
+      "na_distractor": null
+    },
+    {
+      "dataset": "MMLU-SOCIAL",
+      "model": "Qwen3-8B",
+      "method": "CoT( Direct )",
+      "baseline": 78.4,
+      "na_answer": 40.47,
+      "na_distractor": 70.87
+    },
+    {
+      "dataset": "MMLU-SOCIAL",
+      "model": "Qwen3-8B",
+      "method": "CoT( Double Step )",
+      "baseline": 80.31,
+      "na_answer": 57.87,
+      "na_distractor": 74.8
+    },
+    {
+      "dataset": "MMLU-SOCIAL",
+      "model": "Qwen3-8B",
+      "method": "DecoRD",
+      "baseline": 79.13,
+      "na_answer": 63.78,
+      "na_distractor": 75.2
+    },
+    {
+      "dataset": "MMLU-SOCIAL",
+      "model": "Deepseek-V3.2",
+      "method": "CoT( Direct )",
+      "baseline": 89.45,
+      "na_answer": 57.99,
+      "na_distractor": 86.05
+    },
+    {
+      "dataset": "MMLU-SOCIAL",
+      "model": "Deepseek-V3.2",
+      "method": "CoT( Double Step )",
+      "baseline": 92.51,
+      "na_answer": 70.07,
+      "na_distractor": 91.73
+    },
+    {
+      "dataset": "MMLU-SOCIAL",
+      "model": "Deepseek-V3.2",
+      "method": "DecoRD",
+      "baseline": 90.16,
+      "na_answer": 74.02,
+      "na_distractor": 81.5
+    },
+    {
+      "dataset": "MMLU-SOCIAL",
+      "model": "GPT-3.5-turbo",
+      "method": "CoT( Direct )",
+      "baseline": 64.96,
+      "na_answer": 25.59,
+      "na_distractor": 62.2
+    },
+    {
+      "dataset": "MMLU-SOCIAL",
+      "model": "GPT-3.5-turbo",
+      "method": "CoT( Double Step )",
+      "baseline": 81.5,
+      "na_answer": 33.46,
+      "na_distractor": 82.68
+    },
+    {
+      "dataset": "MMLU-SOCIAL",
+      "model": "GPT-3.5-turbo",
+      "method": "DecoRD",
+      "baseline": 88.19,
+      "na_answer": 59.84,
+      "na_distractor": 85.83
+    },
+    {
+      "dataset": "MMLU-SOCIAL",
+      "model": "GPT-4",
+      "method": "CoT( Direct )",
+      "baseline": 84.65,
+      "na_answer": 50,
+      "na_distractor": 87.4
+    },
+    {
+      "dataset": "MMLU-SOCIAL",
+      "model": "GPT-4",
+      "method": "CoT( Double Step )",
+      "baseline": 89.37,
+      "na_answer": 54.33,
+      "na_distractor": 87.8
+    },
+    {
+      "dataset": "MMLU-SOCIAL",
+      "model": "GPT-4",
+      "method": "DecoRD",
+      "baseline": 86.22,
+      "na_answer": 55.39,
+      "na_distractor": 88.58
+    },
+    {
+      "dataset": "MMLU-OTHER",
+      "model": "Qwen3-8B",
+      "method": "CoT( Direct )",
+      "baseline": 77.38,
+      "na_answer": 37.58,
+      "na_distractor": 73.62
+    },
+    {
+      "dataset": "MMLU-OTHER",
+      "model": "Qwen3-8B",
+      "method": "CoT( Double Step )",
+      "baseline": 76.77,
+      "na_answer": 60.24,
+      "na_distractor": 75.98
+    },
+    {
+      "dataset": "MMLU-OTHER",
+      "model": "Qwen3-8B",
+      "method": "DecoRD",
+      "baseline": 77.71,
+      "na_answer": 66.14,
+      "na_distractor": 77.56
+    },
+    {
+      "dataset": "MMLU-OTHER",
+      "model": "Deepseek-V3.2",
+      "method": "CoT( Direct )",
+      "baseline": 87.42,
+      "na_answer": 55.78,
+      "na_distractor": 84.52
+    },
+    {
+      "dataset": "MMLU-OTHER",
+      "model": "Deepseek-V3.2",
+      "method": "CoT( Double Step )",
+      "baseline": 88.58,
+      "na_answer": 69.68,
+      "na_distractor": 85.83
+    },
+    {
+      "dataset": "MMLU-OTHER",
+      "model": "Deepseek-V3.2",
+      "method": "DecoRD",
+      "baseline": 90.16,
+      "na_answer": 76.38,
+      "na_distractor": 84.46
+    },
+    {
+      "dataset": "MMLU-OTHER",
+      "model": "GPT-3.5-turbo",
+      "method": "CoT( Direct )",
+      "baseline": 61.81,
+      "na_answer": 26.38,
+      "na_distractor": 67.32
+    },
+    {
+      "dataset": "MMLU-OTHER",
+      "model": "GPT-3.5-turbo",
+      "method": "CoT( Double Step )",
+      "baseline": 67.72,
+      "na_answer": 38.19,
+      "na_distractor": 67.72
+    },
+    {
+      "dataset": "MMLU-OTHER",
+      "model": "GPT-3.5-turbo",
+      "method": "DecoRD",
+      "baseline": 90.55,
+      "na_answer": 67.32,
+      "na_distractor": 87.4
+    },
+    {
+      "dataset": "MMLU-OTHER",
+      "model": "GPT-4",
+      "method": "CoT( Direct )",
+      "baseline": 85.04,
+      "na_answer": 48.82,
+      "na_distractor": 85.04
+    },
+    {
+      "dataset": "MMLU-OTHER",
+      "model": "GPT-4",
+      "method": "CoT( Double Step )",
+      "baseline": 87.4,
+      "na_answer": 60.24,
+      "na_distractor": 84.65
+    },
+    {
+      "dataset": "MMLU-OTHER",
+      "model": "GPT-4",
+      "method": "DecoRD",
+      "baseline": null,
+      "na_answer": null,
+      "na_distractor": null
+    }
+  ]
+}
