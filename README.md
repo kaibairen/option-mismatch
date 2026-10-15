@@ -14,7 +14,7 @@ python -m decord
 
 ## work2_option_mismatch
 
-Phase III 选项错配的表征测量，以及 SFT / DPO / Rep-DPO 修复。冻结结果在 `work2_option_mismatch/reports/`。
+Phase III 选项错配的表征测量，以及 SFT / DPO / Rep-DPO / DECORD-SFT。冻结结果在 `work2_option_mismatch/reports/`，其中 DECORD 的 AQUA 门禁在 `reports/decord/`。
 
 ```bash
 cd work2_option_mismatch
