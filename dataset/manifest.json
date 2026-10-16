@@ -967,53 +967,153 @@
         "sci_math": {
           "file": "2010-2022_Math_I_MCQs.json",
           "years": "2010-2022",
-          "count": 214
+          "official_count": 214,
+          "count": 213
         },
         "hum_math": {
           "file": "2010-2022_Math_II_MCQs.json",
           "years": "2010-2022",
+          "official_count": 218,
           "count": 218
         },
         "english": {
           "file": "2010-2013_English_MCQs.json",
           "years": "2010-2013",
+          "official_count": 105,
           "count": 105,
-          "note": "GAOKAO-Bench 的英语单选文件只收录 2010–2013，共 105 题，与锁定题量一致。完形、阅读、短文改错不在这个文件里。"
+          "note": "GAOKAO-Bench 的英语单选文件只收录 2010–2013。完形、阅读、短文改错不在这个文件里。"
         },
         "biology": {
           "file": "2010-2022_Biology_MCQs.json",
           "years": "2010-2022",
-          "count": 150
+          "official_count": 150,
+          "count": 148
         },
         "chemistry": {
           "file": "2010-2022_Chemistry_MCQs.json",
           "years": "2010-2022",
-          "count": 124
+          "official_count": 124,
+          "count": 103
         },
         "history": {
           "file": "2010-2022_History_MCQs.json",
           "years": "2010-2022",
+          "official_count": 287,
           "count": 287
         }
       },
       "option_layout_counts": {
-        "sci_math:embedded": 214,
+        "sci_math:embedded": 213,
         "hum_math:embedded": 218,
         "english:embedded": 105,
         "biology:embedded": 148,
-        "biology:table_row_letters": 2,
-        "chemistry:embedded": 108,
-        "chemistry:table_row_letters": 16,
+        "chemistry:embedded": 103,
         "history:embedded": 287
       },
-      "image_counts": {
-        "sci_math": 1,
-        "chemistry": 5
+      "excluded": {
+        "count": 24,
+        "file": "dataset/excluded/gaokao_bench.jsonl",
+        "rule": "评测只保留题干和选项都是文字、并且选项不是单纯字母的题。table_row_letters：卷面选项只是 A/B/C/D，表格留在题干里，推理步会看到选项。image：题干或选项是 mathpix 图片，文字里没有对应内容。missing_option_text：源数据里该选项没有文字。",
+        "items": [
+          {
+            "id": "gaokao_bench-sci_math-2015-64",
+            "reason": "image"
+          },
+          {
+            "id": "gaokao_bench-biology-2011-9",
+            "reason": "table_row_letters"
+          },
+          {
+            "id": "gaokao_bench-biology-2020-115",
+            "reason": "table_row_letters"
+          },
+          {
+            "id": "gaokao_bench-chemistry-2011-8",
+            "reason": "image"
+          },
+          {
+            "id": "gaokao_bench-chemistry-2013-22",
+            "reason": "table_row_letters"
+          },
+          {
+            "id": "gaokao_bench-chemistry-2014-28",
+            "reason": "table_row_letters"
+          },
+          {
+            "id": "gaokao_bench-chemistry-2015-39",
+            "reason": "table_row_letters"
+          },
+          {
+            "id": "gaokao_bench-chemistry-2016-56",
+            "reason": "table_row_letters"
+          },
+          {
+            "id": "gaokao_bench-chemistry-2016-57",
+            "reason": "table_row_letters"
+          },
+          {
+            "id": "gaokao_bench-chemistry-2016-59",
+            "reason": "table_row_letters"
+          },
+          {
+            "id": "gaokao_bench-chemistry-2017-64",
+            "reason": "image"
+          },
+          {
+            "id": "gaokao_bench-chemistry-2017-69",
+            "reason": "table_row_letters"
+          },
+          {
+            "id": "gaokao_bench-chemistry-2017-70",
+            "reason": "table_row_letters"
+          },
+          {
+            "id": "gaokao_bench-chemistry-2017-73",
+            "reason": "table_row_letters"
+          },
+          {
+            "id": "gaokao_bench-chemistry-2018-76",
+            "reason": "image"
+          },
+          {
+            "id": "gaokao_bench-chemistry-2018-78",
+            "reason": "image+missing_option_text"
+          },
+          {
+            "id": "gaokao_bench-chemistry-2018-83",
+            "reason": "image"
+          },
+          {
+            "id": "gaokao_bench-chemistry-2018-84",
+            "reason": "table_row_letters"
+          },
+          {
+            "id": "gaokao_bench-chemistry-2019-93",
+            "reason": "table_row_letters"
+          },
+          {
+            "id": "gaokao_bench-chemistry-2019-99",
+            "reason": "table_row_letters"
+          },
+          {
+            "id": "gaokao_bench-chemistry-2020-102",
+            "reason": "table_row_letters"
+          },
+          {
+            "id": "gaokao_bench-chemistry-2021-114",
+            "reason": "table_row_letters"
+          },
+          {
+            "id": "gaokao_bench-chemistry-2022-118",
+            "reason": "table_row_letters"
+          },
+          {
+            "id": "gaokao_bench-chemistry-2022-123",
+            "reason": "table_row_letters"
+          }
+        ]
       },
-      "missing_option_text": [
-        "chemistry-2018-78:D"
-      ],
-      "note": "meta.analysis 是官方解析，meta.question_raw 是未拆分的原题，都不能放进提示词。option_layout 为 table_row_letters 时，卷面选项是 A/B/C/D，真实内容在题干的表格里，推理步若只读 question 会看到选项。missing_option_text 表示源 JSON 里该选项没有文字，化学 2018 年第 78 题的 D 是一张没有被收录的图。has_image 为 true 的题，题干或选项里有 mathpix 图片链接。"
+      "note": "meta.analysis 是官方解析，meta.question_raw 是未拆分的原题，都不能放进提示词。"
     }
   },
   "raw_sha256": {
@@ -1041,9 +1141,9 @@
     },
     {
       "path": "dataset/gaokao_bench/sci_math.jsonl",
-      "count": 214,
-      "sha256": "ef616ab5496ee2f6c48309180fe5409f9d0224f465ae41b30715cd6deda529ee",
-      "bytes": 294459
+      "count": 213,
+      "sha256": "ec13ddef197ba41bbfe4058a8ef769df265da4c52f46e405ba0e63692fb85b9d",
+      "bytes": 293011
     },
     {
       "path": "dataset/gaokao_bench/hum_math.jsonl",
@@ -1059,21 +1159,27 @@
     },
     {
       "path": "dataset/gaokao_bench/biology.jsonl",
-      "count": 150,
-      "sha256": "35235b0e4793eabdeb34dc3e15c8424a619c9a46cc6d84e887378b6fe05b4d42",
-      "bytes": 275094
+      "count": 148,
+      "sha256": "eaf50939f646c622899a7b2cd5b01c241392f34ab754f353eac58ffdcba6fcf6",
+      "bytes": 271007
     },
     {
       "path": "dataset/gaokao_bench/chemistry.jsonl",
-      "count": 124,
-      "sha256": "429e16fe34a57c4f89695ed9a03716a1f2148220f733c166bfa11c8911b16e2f",
-      "bytes": 307951
+      "count": 103,
+      "sha256": "503cd8c290aef91a3396aa561c6c6b9d86fe8621fa099c5807906563de1fa110",
+      "bytes": 242017
     },
     {
       "path": "dataset/gaokao_bench/history.jsonl",
       "count": 287,
       "sha256": "7130c19b1903275e25657aabf03115cf72174ff815822b1c4124f7c0c8f1314c",
       "bytes": 522258
+    },
+    {
+      "path": "dataset/excluded/gaokao_bench.jsonl",
+      "count": 24,
+      "sha256": "f19dd1f784d773c62ee092c82c7ee3baa11e49a7245448686ebca9f2bf7ab5b7",
+      "bytes": 72353
     },
     {
       "path": "dataset/mmlu/pools/stem.jsonl",

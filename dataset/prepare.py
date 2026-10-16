@@ -277,6 +277,19 @@ def build_logiqa(raw: Path) -> list[dict]:
     return rows
 
 
+def exclude_reason(row: dict) -> str | None:
+    """Why a parsed item cannot be used as text stem plus text options."""
+    reasons = []
+    if row["meta"].get("option_layout") == "table_row_letters":
+        reasons.append("table_row_letters")
+    visible = "\n".join([row["question"], *(opt["text"] for opt in row["options"])])
+    if "![](" in visible or "mathpix.com" in visible:
+        reasons.append("image")
+    if row["meta"].get("missing_option_text"):
+        reasons.append("missing_option_text")
+    return "+".join(reasons) if reasons else None
+
+
 def build_gaokao(raw_dir: Path) -> dict[str, list[dict]]:
     grouped: dict[str, list[dict]] = {}
     for subset, local_name, source_name, expected in GAOKAO_FILES:
@@ -393,20 +406,26 @@ def rel_file(out: Path, info: dict) -> dict:
     return info
 
 
-def build_manifest(out: Path, files: list[dict], draw: dict, raw_dir: Path) -> dict:
+def build_manifest(
+    out: Path,
+    files: list[dict],
+    draw: dict,
+    raw_dir: Path,
+    excluded: list[dict],
+) -> dict:
     gaokao_layouts: dict[str, int] = defaultdict(int)
-    gaokao_images: dict[str, int] = defaultdict(int)
-    gaokao_missing: list[str] = []
+    kept_counts: dict[str, int] = {}
     for subset, _, _, _ in GAOKAO_FILES:
-        for line in (out / "gaokao_bench" / f"{subset}.jsonl").read_text(encoding="utf-8").splitlines():
-            meta = json.loads(line)["meta"]
+        rows = [
+            json.loads(line)
+            for line in (out / "gaokao_bench" / f"{subset}.jsonl").read_text(encoding="utf-8").splitlines()
+        ]
+        kept_counts[subset] = len(rows)
+        for row in rows:
+            meta = row["meta"]
+            if exclude_reason(row):
+                raise ValueError(f"{row['id']} stayed in the eval file")
             gaokao_layouts[f"{subset}:{meta['option_layout']}"] += 1
-            if meta.get("has_image"):
-                gaokao_images[subset] += 1
-            if meta.get("missing_option_text"):
-                gaokao_missing.append(
-                    f"{subset}-{meta['year']}-{meta['index']}:{''.join(meta['missing_option_text'])}"
-                )
     sources = {
         "aqua_rat": {
             "name": "AQUA-RAT",
@@ -455,28 +474,60 @@ def build_manifest(out: Path, files: list[dict], draw: dict, raw_dir: Path) -> d
             "url_base": GAOKAO_BASE,
             "scope": "全国卷单选题。生物和化学在结果里合成一列「生化」，文件仍分开保存。",
             "subsets": {
-                "sci_math": {"file": "2010-2022_Math_I_MCQs.json", "years": "2010-2022", "count": 214},
-                "hum_math": {"file": "2010-2022_Math_II_MCQs.json", "years": "2010-2022", "count": 218},
+                "sci_math": {
+                    "file": "2010-2022_Math_I_MCQs.json",
+                    "years": "2010-2022",
+                    "official_count": 214,
+                    "count": kept_counts["sci_math"],
+                },
+                "hum_math": {
+                    "file": "2010-2022_Math_II_MCQs.json",
+                    "years": "2010-2022",
+                    "official_count": 218,
+                    "count": kept_counts["hum_math"],
+                },
                 "english": {
                     "file": "2010-2013_English_MCQs.json",
                     "years": "2010-2013",
-                    "count": 105,
-                    "note": "GAOKAO-Bench 的英语单选文件只收录 2010–2013，共 105 题，与锁定题量一致。完形、阅读、短文改错不在这个文件里。",
+                    "official_count": 105,
+                    "count": kept_counts["english"],
+                    "note": "GAOKAO-Bench 的英语单选文件只收录 2010–2013。完形、阅读、短文改错不在这个文件里。",
                 },
-                "biology": {"file": "2010-2022_Biology_MCQs.json", "years": "2010-2022", "count": 150},
-                "chemistry": {"file": "2010-2022_Chemistry_MCQs.json", "years": "2010-2022", "count": 124},
-                "history": {"file": "2010-2022_History_MCQs.json", "years": "2010-2022", "count": 287},
+                "biology": {
+                    "file": "2010-2022_Biology_MCQs.json",
+                    "years": "2010-2022",
+                    "official_count": 150,
+                    "count": kept_counts["biology"],
+                },
+                "chemistry": {
+                    "file": "2010-2022_Chemistry_MCQs.json",
+                    "years": "2010-2022",
+                    "official_count": 124,
+                    "count": kept_counts["chemistry"],
+                },
+                "history": {
+                    "file": "2010-2022_History_MCQs.json",
+                    "years": "2010-2022",
+                    "official_count": 287,
+                    "count": kept_counts["history"],
+                },
             },
             "option_layout_counts": dict(gaokao_layouts),
-            "image_counts": dict(gaokao_images),
-            "missing_option_text": gaokao_missing,
-            "note": (
-                "meta.analysis 是官方解析，meta.question_raw 是未拆分的原题，都不能放进提示词。"
-                "option_layout 为 table_row_letters 时，卷面选项是 A/B/C/D，真实内容在题干的表格里，"
-                "推理步若只读 question 会看到选项。"
-                "missing_option_text 表示源 JSON 里该选项没有文字，化学 2018 年第 78 题的 D 是一张没有被收录的图。"
-                "has_image 为 true 的题，题干或选项里有 mathpix 图片链接。"
-            ),
+            "excluded": {
+                "count": len(excluded),
+                "file": "dataset/excluded/gaokao_bench.jsonl",
+                "rule": (
+                    "评测只保留题干和选项都是文字、并且选项不是单纯字母的题。"
+                    "table_row_letters：卷面选项只是 A/B/C/D，表格留在题干里，推理步会看到选项。"
+                    "image：题干或选项是 mathpix 图片，文字里没有对应内容。"
+                    "missing_option_text：源数据里该选项没有文字。"
+                ),
+                "items": [
+                    {"id": row["id"], "reason": row["meta"]["exclude_reason"]}
+                    for row in excluded
+                ],
+            },
+            "note": "meta.analysis 是官方解析，meta.question_raw 是未拆分的原题，都不能放进提示词。",
         },
     }
     return {
@@ -492,7 +543,13 @@ def build_manifest(out: Path, files: list[dict], draw: dict, raw_dir: Path) -> d
             "answer": "大写字母",
             "meta": "来源字段。rationale、analysis、question_raw 不进入提示词。",
         },
-        "eval_files": [item["path"] for item in files if "/pools/" not in item["path"] and item["path"].endswith(".jsonl")],
+        "eval_files": [
+            item["path"]
+            for item in files
+            if item["path"].endswith(".jsonl")
+            and "/pools/" not in item["path"]
+            and "/excluded/" not in item["path"]
+        ],
         "sources": sources,
         "raw_sha256": {
             "aqua_test.json": sha256_file(raw_dir / "aqua_test.json"),
@@ -520,12 +577,36 @@ def main() -> None:
     logiqa = build_logiqa(args.raw / "logiqa_test.txt")
     file_infos.append(rel_file(out, write_jsonl(out / "logiqa" / "test.jsonl", logiqa)))
 
+    kept_expect = {
+        "sci_math": 213,
+        "hum_math": 218,
+        "english": 105,
+        "biology": 148,
+        "chemistry": 103,
+        "history": 287,
+    }
     gaokao = build_gaokao(args.raw)
-    for subset, _, _, expected in GAOKAO_FILES:
-        info = write_jsonl(out / "gaokao_bench" / f"{subset}.jsonl", gaokao[subset])
-        if info["count"] != expected:
-            raise ValueError(subset)
+    excluded: list[dict] = []
+    for subset, _, _, _ in GAOKAO_FILES:
+        kept = []
+        for row in gaokao[subset]:
+            reason = exclude_reason(row)
+            if reason is None:
+                kept.append(row)
+                continue
+            dropped = dict(row)
+            dropped["meta"] = dict(row["meta"])
+            dropped["meta"]["exclude_reason"] = reason
+            excluded.append(dropped)
+        info = write_jsonl(out / "gaokao_bench" / f"{subset}.jsonl", kept)
+        if info["count"] != kept_expect[subset]:
+            raise ValueError(f"{subset} kept {info['count']}, expected {kept_expect[subset]}")
         file_infos.append(rel_file(out, info))
+    if len(excluded) != 24:
+        raise ValueError(f"excluded {len(excluded)}, expected 24")
+    file_infos.append(
+        rel_file(out, write_jsonl(out / "excluded" / "gaokao_bench.jsonl", excluded))
+    )
 
     pools, eval_sets, draw = build_mmlu(args.raw / "mmlu" / "data" / "test")
     for group in MMLU_GROUPS:
@@ -537,7 +618,7 @@ def main() -> None:
             raise ValueError(group)
         file_infos.append(rel_file(out, info))
 
-    manifest = build_manifest(out, file_infos, draw, args.raw)
+    manifest = build_manifest(out, file_infos, draw, args.raw, excluded)
     manifest_path = out / "manifest.json"
     manifest_path.write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",

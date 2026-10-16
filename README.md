@@ -33,6 +33,7 @@ bash scripts/ci/cloud_agent_install.sh
 | `dataset/logiqa/test.jsonl` | LogiQA 英文 test，651 |
 | `dataset/mmlu/eval/` | STEM、Social Sciences、Humanities、Other 各 100，种子 42 |
 | `dataset/mmlu/pools/` | 上面 400 题所在的官方 test 全量，14042 |
-| `dataset/gaokao_bench/` | 理科数学 214、文科数学 218、英语单选 105、生物 150、化学 124、历史 287 |
+| `dataset/gaokao_bench/` | 理科数学 213、文科数学 218、英语单选 105、生物 148、化学 103、历史 287 |
+| `dataset/excluded/gaokao_bench.jsonl` | 从高考评测集剔除的 24 题：选项只是字母，或题干/选项是图片 |
 
 每行一条记录：`id`、`dataset`、`split`、`subset`、`question`、`options`、`answer`、`meta`。`meta` 里的解析和原题不进入提示词。`dataset/prepare.py` 可以从原始文件重新生成这批 jsonl。
