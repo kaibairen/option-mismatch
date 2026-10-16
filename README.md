@@ -31,8 +31,9 @@ bash scripts/ci/cloud_agent_install.sh
 | --- | --- |
 | `dataset/aqua_rat/test.jsonl` | AQUA-RAT test，254 |
 | `dataset/logiqa/test.jsonl` | LogiQA 英文 test，651 |
-| `dataset/mmlu/eval/` | STEM、Social Sciences、Humanities、Other 各 100，种子 42 |
-| `dataset/mmlu/pools/` | 上面 400 题所在的官方 test 全量，14042 |
+| `dataset/mmlu/subject40/` | 论文用的 MMLU：57 个学科各 40 题，种子 42，共 2280。抽中的题号在 `draw.json` |
+| `dataset/mmlu/eval/` | 早先的连通性样本：四个大类各 100，种子 42 |
+| `dataset/mmlu/pools/` | 官方 test 全量，14042 |
 | `dataset/gaokao_bench/` | 理科数学 213、文科数学 218、英语单选 105、生物 148、化学 103、历史 287 |
 | `dataset/excluded/gaokao_bench.jsonl` | 从高考评测集剔除的 24 题：选项只是字母，或题干/选项是图片 |
 

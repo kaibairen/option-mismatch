@@ -25,6 +25,13 @@
     "dataset/mmlu/eval/humanities.jsonl",
     "dataset/mmlu/eval/other.jsonl"
   ],
+  "experiment_files": [
+    "dataset/aqua_rat/test.jsonl",
+    "dataset/mmlu/subject40/stem.jsonl",
+    "dataset/mmlu/subject40/social_sciences.jsonl",
+    "dataset/mmlu/subject40/humanities.jsonl",
+    "dataset/mmlu/subject40/other.jsonl"
+  ],
   "sources": {
     "aqua_rat": {
       "name": "AQUA-RAT",
@@ -50,9 +57,25 @@
       "category_map_url": "https://raw.githubusercontent.com/EleutherAI/lm-evaluation-harness/main/lm_eval/tasks/mmlu/_generate_configs.py",
       "official_test_count": 14042,
       "eval_per_group": 100,
-      "sampling": "每个大类单独用 random.Random(42).sample 从该大类官方 test 池抽 100 题。池内顺序是 SUBJECTS 的插入顺序，再按 CSV 行号。评测文件按池内位置排序。sample_ids_draw_order 才是抽样函数的返回顺序。Python 3.11 起 random.sample 的算法与更早版本不同，已提交的 jsonl 是锁定结果。",
+      "sampling": "连通性样本：每个大类单独用 random.Random(42).sample 从该大类官方 test 池抽 100 题。池内顺序是 SUBJECTS 的插入顺序，再按 CSV 行号。评测文件按池内位置排序。sample_ids_draw_order 才是抽样函数的返回顺序。Python 3.11 起 random.sample 的算法与更早版本不同，已提交的 jsonl 是锁定结果。",
+      "experiment_sample": {
+        "file_dir": "dataset/mmlu/subject40",
+        "per_subject": 40,
+        "seed": 42,
+        "rng": "每个学科单独 random.Random(42)，再 sample(range(该学科题数), 40)",
+        "python": "3.12.3",
+        "order": "文件内按学科在 SUBJECTS 中的顺序，学科内按 CSV 行号。抽中的顺序在 draw.json 的 sample_ids_draw_order。",
+        "counts": {
+          "stem": 760,
+          "social_sciences": 480,
+          "humanities": 520,
+          "other": 520
+        },
+        "total": 2280,
+        "draw_file": "dataset/mmlu/subject40/draw.json"
+      },
       "python": "3.12.3",
-      "prompting": "zero-shot。不要使用 MMLU 的 5-shot dev。评测只读 dataset/mmlu/eval，pools 是抽这 100 题的官方 test 全量。",
+      "prompting": "zero-shot。不要使用 MMLU 的 5-shot dev。论文评测读 dataset/mmlu/subject40。dataset/mmlu/eval 是早先每个大类 100 题的连通性样本。",
       "text": "官方 CSV 中少量 Windows-1252 标点以 U+0080–U+009F 原样保留。U+0085 在 jsonl 里写成 \\u0085，读回后仍是原字符。",
       "draw": {
         "stem": {
@@ -1194,6 +1217,12 @@
       "bytes": 57278
     },
     {
+      "path": "dataset/mmlu/subject40/stem.jsonl",
+      "count": 760,
+      "sha256": "9b2384e384ec21bbb1a622955fdc5cce686a0762fbcc1dfb569a6a668b553a00",
+      "bytes": 440327
+    },
+    {
       "path": "dataset/mmlu/pools/social_sciences.jsonl",
       "count": 3077,
       "sha256": "65863e8fdab6120f625dbf899078e30b6cf15a0d318fe5f8b22842cc97290826",
@@ -1204,6 +1233,12 @@
       "count": 100,
       "sha256": "b1892dab400c6c6799bfc12f9485082255b7ff77410222dc99f205d20ecb7b57",
       "bytes": 68517
+    },
+    {
+      "path": "dataset/mmlu/subject40/social_sciences.jsonl",
+      "count": 480,
+      "sha256": "d13f0c4599ff4930ab7ce4d9a48c272ab7f6e46734ec33f919128552690b63c0",
+      "bytes": 310499
     },
     {
       "path": "dataset/mmlu/pools/humanities.jsonl",
@@ -1218,6 +1253,12 @@
       "bytes": 103151
     },
     {
+      "path": "dataset/mmlu/subject40/humanities.jsonl",
+      "count": 520,
+      "sha256": "75c922d1e031bb134a185940374fd569d4ccc5f4fd5e5036821c0f0f651b381a",
+      "bytes": 502879
+    },
+    {
       "path": "dataset/mmlu/pools/other.jsonl",
       "count": 3107,
       "sha256": "fb2cd49901b8d8495b6b6f85e98066662176339ccaccf462d219ab1dc252fdce",
@@ -1228,6 +1269,12 @@
       "count": 100,
       "sha256": "649809fd53a8a322f2135f2db8fc3d9e2ba4ed7790345702a3ac66ad077ccbf1",
       "bytes": 61013
+    },
+    {
+      "path": "dataset/mmlu/subject40/other.jsonl",
+      "count": 520,
+      "sha256": "87077db201a03dea8fe39e8f763f868b4a8c14db0d8c10e281fd13c40bfeaa92",
+      "bytes": 299644
     }
   ]
 }

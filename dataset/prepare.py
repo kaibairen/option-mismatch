@@ -81,6 +81,10 @@ MMLU_SUBJECTS = {
 MMLU_GROUPS = ("stem", "social_sciences", "humanities", "other")
 MMLU_SAMPLE_SEED = 42
 MMLU_SAMPLE_SIZE = 100
+# Experiment draw: 40 items from each subject. A fresh Random(42) per subject,
+# so the draw does not depend on which subject is visited first.
+MMLU_SUBJECT_SAMPLE_SEED = 42
+MMLU_SUBJECT_SAMPLE_SIZE = 40
 
 GAOKAO_FILES = (
     ("sci_math", "math_i.json", "2010-2022_Math_I_MCQs.json", 214),
@@ -352,12 +356,14 @@ def build_mmlu(test_dir: Path) -> tuple[dict[str, list[dict]], dict[str, list[di
             f"MMLU subjects mismatch missing={sorted(expected - found)} extra={sorted(found - expected)}"
         )
     pools: dict[str, list[dict]] = {group: [] for group in MMLU_GROUPS}
+    subject_rows: dict[str, list[dict]] = {}
     subject_counts: dict[str, dict[str, int]] = {group: {} for group in MMLU_GROUPS}
     for subject, group in MMLU_SUBJECTS.items():
         path = test_dir / f"{subject}_test.csv"
         with path.open(newline="", encoding="utf-8") as handle:
             parsed = list(csv.reader(handle))
         subject_counts[group][subject] = len(parsed)
+        subject_rows[subject] = []
         for row_index, cols in enumerate(parsed):
             if len(cols) != 6:
                 raise ValueError(f"{path.name} row {row_index} has {len(cols)} columns")
@@ -367,17 +373,17 @@ def build_mmlu(test_dir: Path) -> tuple[dict[str, list[dict]], dict[str, list[di
                 {"letter": letter, "text": choice.strip()}
                 for letter, choice in zip("ABCD", choices)
             ]
-            pools[group].append(
-                record(
-                    item_id=f"mmlu-{subject}-{row_index:04d}",
-                    dataset="mmlu",
-                    subset=group,
-                    question=question.strip(),
-                    options=options,
-                    answer=answer,
-                    meta={"subject": subject, "row": row_index},
-                )
+            row = record(
+                item_id=f"mmlu-{subject}-{row_index:04d}",
+                dataset="mmlu",
+                subset=group,
+                question=question.strip(),
+                options=options,
+                answer=answer,
+                meta={"subject": subject, "row": row_index},
             )
+            subject_rows[subject].append(row)
+            pools[group].append(row)
     total = sum(len(pool) for pool in pools.values())
     if total != 14042:
         raise ValueError(f"MMLU test has {total} rows, expected 14042")
@@ -396,7 +402,25 @@ def build_mmlu(test_dir: Path) -> tuple[dict[str, list[dict]], dict[str, list[di
             "sample_ids_draw_order": [pool[index]["id"] for index in picked],
             "eval_ids_file_order": [row["id"] for row in eval_sets[group]],
         }
-    return pools, eval_sets, draw
+    subject_sets: dict[str, list[dict]] = {group: [] for group in MMLU_GROUPS}
+    subject_draw: dict[str, dict] = {}
+    for subject, group in MMLU_SUBJECTS.items():
+        rows = subject_rows[subject]
+        if len(rows) < MMLU_SUBJECT_SAMPLE_SIZE:
+            raise ValueError(f"{subject} has {len(rows)} test rows")
+        rng = random.Random(MMLU_SUBJECT_SAMPLE_SEED)
+        picked = rng.sample(range(len(rows)), MMLU_SUBJECT_SAMPLE_SIZE)
+        chosen = [rows[index] for index in sorted(picked)]
+        subject_sets[group].extend(chosen)
+        subject_draw[subject] = {
+            "group": group,
+            "pool_size": len(rows),
+            "seed": MMLU_SUBJECT_SAMPLE_SEED,
+            "sample_size": MMLU_SUBJECT_SAMPLE_SIZE,
+            "sample_ids_draw_order": [rows[index]["id"] for index in picked],
+            "eval_ids_file_order": [row["id"] for row in chosen],
+        }
+    return pools, eval_sets, draw, subject_sets, subject_draw
 
 
 def rel_file(out: Path, info: dict) -> dict:
@@ -410,6 +434,7 @@ def build_manifest(
     out: Path,
     files: list[dict],
     draw: dict,
+    subject_draw: dict,
     raw_dir: Path,
     excluded: list[dict],
 ) -> dict:
@@ -458,13 +483,28 @@ def build_manifest(
             "official_test_count": 14042,
             "eval_per_group": MMLU_SAMPLE_SIZE,
             "sampling": (
-                "每个大类单独用 random.Random(42).sample 从该大类官方 test 池抽 100 题。"
+                "连通性样本：每个大类单独用 random.Random(42).sample 从该大类官方 test 池抽 100 题。"
                 "池内顺序是 SUBJECTS 的插入顺序，再按 CSV 行号。"
                 "评测文件按池内位置排序。sample_ids_draw_order 才是抽样函数的返回顺序。"
                 "Python 3.11 起 random.sample 的算法与更早版本不同，已提交的 jsonl 是锁定结果。"
             ),
+            "experiment_sample": {
+                "file_dir": "dataset/mmlu/subject40",
+                "per_subject": MMLU_SUBJECT_SAMPLE_SIZE,
+                "seed": MMLU_SUBJECT_SAMPLE_SEED,
+                "rng": "每个学科单独 random.Random(42)，再 sample(range(该学科题数), 40)",
+                "python": "3.12.3",
+                "order": "文件内按学科在 SUBJECTS 中的顺序，学科内按 CSV 行号。抽中的顺序在 draw.json 的 sample_ids_draw_order。",
+                "counts": {
+                    group: sum(1 for item in subject_draw.values() if item["group"] == group)
+                    * MMLU_SUBJECT_SAMPLE_SIZE
+                    for group in MMLU_GROUPS
+                },
+                "total": len(subject_draw) * MMLU_SUBJECT_SAMPLE_SIZE,
+                "draw_file": "dataset/mmlu/subject40/draw.json",
+            },
             "python": "3.12.3",
-            "prompting": "zero-shot。不要使用 MMLU 的 5-shot dev。评测只读 dataset/mmlu/eval，pools 是抽这 100 题的官方 test 全量。",
+            "prompting": "zero-shot。不要使用 MMLU 的 5-shot dev。论文评测读 dataset/mmlu/subject40。dataset/mmlu/eval 是早先每个大类 100 题的连通性样本。",
             "text": "官方 CSV 中少量 Windows-1252 标点以 U+0080–U+009F 原样保留。U+0085 在 jsonl 里写成 \\u0085，读回后仍是原字符。",
             "draw": draw,
         },
@@ -549,6 +589,14 @@ def build_manifest(
             if item["path"].endswith(".jsonl")
             and "/pools/" not in item["path"]
             and "/excluded/" not in item["path"]
+            and "/subject40/" not in item["path"]
+        ],
+        "experiment_files": [
+            "dataset/aqua_rat/test.jsonl",
+            *[
+                f"dataset/mmlu/subject40/{group}.jsonl"
+                for group in MMLU_GROUPS
+            ],
         ],
         "sources": sources,
         "raw_sha256": {
@@ -608,7 +656,9 @@ def main() -> None:
         rel_file(out, write_jsonl(out / "excluded" / "gaokao_bench.jsonl", excluded))
     )
 
-    pools, eval_sets, draw = build_mmlu(args.raw / "mmlu" / "data" / "test")
+    pools, eval_sets, draw, subject_sets, subject_draw = build_mmlu(
+        args.raw / "mmlu" / "data" / "test"
+    )
     for group in MMLU_GROUPS:
         file_infos.append(
             rel_file(out, write_jsonl(out / "mmlu" / "pools" / f"{group}.jsonl", pools[group]))
@@ -617,8 +667,32 @@ def main() -> None:
         if info["count"] != MMLU_SAMPLE_SIZE:
             raise ValueError(group)
         file_infos.append(rel_file(out, info))
+        info = write_jsonl(
+            out / "mmlu" / "subject40" / f"{group}.jsonl", subject_sets[group]
+        )
+        expected = sum(1 for item in subject_draw.values() if item["group"] == group)
+        expected *= MMLU_SUBJECT_SAMPLE_SIZE
+        if info["count"] != expected:
+            raise ValueError(f"{group} subject sample {info['count']}, expected {expected}")
+        file_infos.append(rel_file(out, info))
+    draw_path = out / "mmlu" / "subject40" / "draw.json"
+    draw_path.write_text(
+        json.dumps(
+            {
+                "seed": MMLU_SUBJECT_SAMPLE_SEED,
+                "per_subject": MMLU_SUBJECT_SAMPLE_SIZE,
+                "rng": "random.Random(42) created separately for each subject",
+                "python": "3.12.3",
+                "subjects": subject_draw,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
 
-    manifest = build_manifest(out, file_infos, draw, args.raw, excluded)
+    manifest = build_manifest(out, file_infos, draw, subject_draw, args.raw, excluded)
     manifest_path = out / "manifest.json"
     manifest_path.write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
