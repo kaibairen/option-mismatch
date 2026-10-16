@@ -19,11 +19,24 @@ class OpenAIChatClient:
         base_url: str | None = None,
         api_key: str | None = None,
         timeout_s: float = 180.0,
+        extra_body: dict | None = None,
     ):
         self.model = model
         self.base_url = (base_url or os.environ.get("BASE_URL") or "https://api.openai.com/v1").rstrip("/")
         self.api_key = api_key if api_key is not None else os.environ.get("API_KEY", "")
         self.timeout_s = timeout_s
+        self.extra_body = dict(extra_body or {})
+
+    def request_payload(self, prompt: str, *, temperature: float, top_p: float, max_tokens: int) -> dict:
+        payload = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": temperature,
+            "top_p": top_p,
+            "max_tokens": max_tokens,
+        }
+        payload.update(self.extra_body)
+        return payload
 
     def complete(self, prompt: str, *, temperature: float, top_p: float, max_tokens: int) -> str:
         if not self.api_key:
@@ -31,13 +44,7 @@ class OpenAIChatClient:
         if not self.model:
             raise ChatError("model is empty")
         payload = json.dumps(
-            {
-                "model": self.model,
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": temperature,
-                "top_p": top_p,
-                "max_tokens": max_tokens,
-            }
+            self.request_payload(prompt, temperature=temperature, top_p=top_p, max_tokens=max_tokens)
         ).encode("utf-8")
         request = urllib.request.Request(
             f"{self.base_url}/chat/completions",
@@ -57,6 +64,10 @@ class OpenAIChatClient:
         except urllib.error.URLError as exc:
             raise ChatError(f"transport error: {exc.reason}") from exc
         try:
-            return str(body["choices"][0]["message"]["content"])
+            message = body["choices"][0]["message"]
+            content = message["content"] if isinstance(message, dict) else None
         except (KeyError, IndexError, TypeError) as exc:
             raise ChatError(f"response has no message content: {body}") from exc
+        if content is None:
+            return ""
+        return str(content)

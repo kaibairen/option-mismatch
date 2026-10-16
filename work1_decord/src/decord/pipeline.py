@@ -1,4 +1,9 @@
-"""Standard DecoRD, confidence reflection, and the coupled CoT baseline."""
+"""Six zero-shot systems on one multiple-choice item.
+
+Coupled baselines see the stem and the options in every call: direct, CoT,
+Plan-and-Solve, and one-revision Reflexion. DecoRD reasoning sees the stem
+only; the decision and reflection calls see the options.
+"""
 
 from __future__ import annotations
 
@@ -7,9 +12,27 @@ from typing import Any, Protocol
 
 from decord.metrics import majority_letter, normalized_confidence, reasoning_matches
 from decord.parse import extract_letter, parse_json_object
-from decord.prompts import cot_prompt, decision_prompt, reasoning_prompt, reflection_prompt
+from decord.prompts import (
+    cot_prompt,
+    decision_prompt,
+    direct_prompt,
+    plan_prompt,
+    reasoning_prompt,
+    reflection_prompt,
+    reflexion_prompt,
+    solve_prompt,
+)
 
 LETTERS = "ABCDE"
+
+METHODS = (
+    "direct",
+    "cot",
+    "plan_and_solve",
+    "reflexion",
+    "decord_standard",
+    "decord_confidence_reflection",
+)
 
 
 class ChatClient(Protocol):
@@ -86,7 +109,115 @@ def run_cot(
         "correct": bool(letter) and letter == gold_letter,
         "reasoning_correct": None,
         "error": error,
+        "n_calls": 1,
         "raw": {"cot": text},
+    }
+
+
+def run_direct(
+    client: ChatClient,
+    *,
+    question: str,
+    options: list[str],
+    gold: str,
+    config: GenerateConfig | None = None,
+) -> dict[str, Any]:
+    settings = config or GenerateConfig()
+    prompt = direct_prompt(question, options)
+    text, error = _complete(client, prompt, settings)
+    letter = extract_letter(text) if text else ""
+    gold_letter = (gold or "").strip().upper()[:1]
+    return {
+        "method": "direct",
+        "status": _status_for(text, error, letter),
+        "pred": letter,
+        "correct": bool(letter) and letter == gold_letter,
+        "reasoning_correct": None,
+        "error": error,
+        "n_calls": 1,
+        "raw": {"direct": text},
+    }
+
+
+def run_plan_and_solve(
+    client: ChatClient,
+    *,
+    question: str,
+    options: list[str],
+    gold: str,
+    config: GenerateConfig | None = None,
+) -> dict[str, Any]:
+    """Devise a plan, then carry that plan out. Both calls see the options."""
+
+    settings = config or GenerateConfig()
+    plan_text, plan_error = _complete(client, plan_prompt(question, options), settings)
+    if plan_error or not plan_text.strip():
+        return {
+            "method": "plan_and_solve",
+            "status": _status_for(plan_text, plan_error, ""),
+            "pred": "",
+            "correct": False,
+            "reasoning_correct": None,
+            "error": plan_error,
+            "n_calls": 1,
+            "raw": {"plan": plan_text},
+        }
+    payload = parse_json_object(plan_text) or {}
+    plan = str(payload.get("plan") or plan_text)
+    solve_text, solve_error = _complete(client, solve_prompt(question, options, plan), settings)
+    letter = extract_letter(solve_text) if solve_text else ""
+    gold_letter = (gold or "").strip().upper()[:1]
+    return {
+        "method": "plan_and_solve",
+        "status": _status_for(solve_text, solve_error, letter),
+        "pred": letter,
+        "correct": bool(letter) and letter == gold_letter,
+        "reasoning_correct": None,
+        "error": solve_error,
+        "n_calls": 2,
+        "raw": {"plan": plan_text, "solve": solve_text},
+    }
+
+
+def run_reflexion(
+    client: ChatClient,
+    *,
+    question: str,
+    options: list[str],
+    gold: str,
+    config: GenerateConfig | None = None,
+) -> dict[str, Any]:
+    """One coupled CoT attempt, then one critique. No further retry."""
+
+    settings = config or GenerateConfig()
+    first_text, first_error = _complete(client, cot_prompt(question, options), settings)
+    if first_error or not first_text.strip():
+        return {
+            "method": "reflexion",
+            "status": _status_for(first_text, first_error, ""),
+            "pred": "",
+            "correct": False,
+            "reasoning_correct": None,
+            "error": first_error,
+            "n_calls": 1,
+            "raw": {"cot": first_text},
+        }
+    revised_text, revised_error = _complete(
+        client,
+        reflexion_prompt(question, options, first_text),
+        settings,
+    )
+    letter = extract_letter(revised_text) if revised_text else ""
+    gold_letter = (gold or "").strip().upper()[:1]
+    return {
+        "method": "reflexion",
+        "status": _status_for(revised_text, revised_error, letter),
+        "pred": letter,
+        "correct": bool(letter) and letter == gold_letter,
+        "reasoning_correct": None,
+        "error": revised_error,
+        "n_calls": 2,
+        "raw": {"cot": first_text, "revision": revised_text},
     }
 
 
@@ -119,6 +250,7 @@ def run_standard(
             "correct": False,
             "reasoning_correct": None,
             "error": reason_error,
+            "n_calls": 1,
             "raw": {"reasoning": reason_text},
         }
     prompt = decision_prompt(question, reasoning, conclusion, options)
@@ -133,6 +265,7 @@ def run_standard(
         "reasoning_correct": reasoning_matches(conclusion or reasoning, options, gold),
         "conclusion": conclusion,
         "error": decision_error,
+        "n_calls": 2,
         "raw": {"reasoning": reason_text, "decision": decision_text},
     }
 
@@ -157,6 +290,7 @@ def run_confidence_reflection(
             "correct": False,
             "reasoning_correct": None,
             "error": reason_error,
+            "n_calls": 1,
             "raw": {"reasoning": reason_text},
         }
     labels = option_letters(options)
@@ -204,5 +338,16 @@ def run_confidence_reflection(
         "reflected": reflected,
         "sample_counts": counts,
         "error": final_error,
+        "n_calls": 1 + len(sample_text) + (1 if reflected else 0),
         "raw": {"reasoning": reason_text, "samples": sample_text, "reflection": final_text},
     }
+
+
+RUNNERS = {
+    "direct": run_direct,
+    "cot": run_cot,
+    "plan_and_solve": run_plan_and_solve,
+    "reflexion": run_reflexion,
+    "decord_standard": run_standard,
+    "decord_confidence_reflection": run_confidence_reflection,
+}

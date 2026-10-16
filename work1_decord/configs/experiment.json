@@ -1,0 +1,40 @@
+{
+  "models": [
+    {
+      "id": "qwen3-8b",
+      "extra_body": {"enable_thinking": false}
+    },
+    {
+      "id": "gpt-4o-mini",
+      "extra_body": {}
+    },
+    {
+      "id": "deepseek-v4-pro-guan",
+      "extra_body": {"thinking": {"type": "disabled"}}
+    }
+  ],
+  "methods": [
+    "direct",
+    "cot",
+    "plan_and_solve",
+    "reflexion",
+    "decord_standard",
+    "decord_confidence_reflection"
+  ],
+  "temperature": 0.4,
+  "top_p": 1.0,
+  "max_tokens": 512,
+  "sample_k": 5,
+  "confidence_threshold": 0.5,
+  "request_timeout_s": 180,
+  "notes": {
+    "models": "qwen3-8b is the open 8B. gpt-4o-mini is the current closed lightweight model. deepseek-v4-pro-guan is the current stronger official model. All three answer directly. Order published tables by measured CoT accuracy.",
+    "thinking": "DeepSeek V4 thinks unless the request sets thinking.type to disabled. qwen3-8b receives enable_thinking false. gpt-4o-mini has no thinking switch.",
+    "prompting": "Zero-shot. No MMLU 5-shot dev items and no AQUA rationales.",
+    "plan_and_solve": "Wang et al. ACL 2023 put the plan and the solution in one trigger. This runner uses two calls so the solve step reads the plan text. Both calls see the options.",
+    "reflexion": "One coupled CoT call plus one critique. No sampling, no vote, no further retry.",
+    "confidence": "Decision step is sampled sample_k times. Confidence is 1 - H(p) / log(M). Below 0.5 triggers one reflection.",
+    "scoring": "accuracy_full keeps failures in the denominator. MMLU category and overall scores are unweighted means of subject accuracies.",
+    "endpoint": "Set BASE_URL to the OpenAI-compatible root, including /v1, and API_KEY in the environment. The runner does not read a key from this file."
+  }
+}

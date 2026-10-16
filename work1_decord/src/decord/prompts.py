@@ -1,4 +1,7 @@
-"""Prompt templates for the three DecoRD agents and the CoT baseline.
+"""Prompt templates for DecoRD and the four coupled baselines.
+
+Every template is zero-shot. None of them includes a worked example, an MMLU
+dev item, or a field from ``meta`` (AQUA rationales, GAOKAO analysis).
 
 The wrapper matches the manuscript's agent template: a task line, instructions,
 and a JSON object that ``json.loads`` can read. The reasoning agent receives
@@ -96,6 +99,78 @@ def reflection_prompt(
         f"Confidence: {confidence:.4f}"
     )
     return _wrap("confidence reflection", instructions, schema, context)
+
+
+def direct_prompt(question: str, options: list[str]) -> str:
+    schema = {"answer": "A"}
+    context = f"Question:\n{question.strip()}\n\nOptions:\n{_options_block(options)}"
+    return _wrap(
+        "multiple-choice solving",
+        "Read the question and the options. Reply with the option letter only.",
+        schema,
+        context,
+    )
+
+
+def plan_prompt(question: str, options: list[str]) -> str:
+    """First call of Plan-and-Solve (Wang et al., ACL 2023).
+
+    The paper puts “devise a plan” and “carry out the plan” in one trigger
+    sentence. This runner asks for the plan alone so the next call can read it.
+    """
+
+    schema = {"plan": ""}
+    context = f"Question:\n{question.strip()}\n\nOptions:\n{_options_block(options)}"
+    return _wrap(
+        "problem planning",
+        (
+            "Let's first understand the problem and devise a plan to solve the problem. "
+            "Do not choose an option letter."
+        ),
+        schema,
+        context,
+    )
+
+
+def solve_prompt(question: str, options: list[str], plan: str) -> str:
+    """Second call of Plan-and-Solve. The plan from the first call is an input."""
+
+    schema = {"reasoning": "", "answer": "A"}
+    context = (
+        f"Question:\n{question.strip()}\n\n"
+        f"Options:\n{_options_block(options)}\n\n"
+        f"Plan:\n{plan.strip()}"
+    )
+    return _wrap(
+        "plan execution",
+        "Carry out the plan and solve the problem step by step. Then put the final option letter in answer.",
+        schema,
+        context,
+    )
+
+
+def reflexion_prompt(question: str, options: list[str], previous: str) -> str:
+    """One critique-and-revise call after a single coupled CoT attempt.
+
+    Shinn et al. (2023) retry until the attempt improves. This baseline stops
+    after this one revision: no extra sample and no vote.
+    """
+
+    schema = {"critique": "", "answer": "A"}
+    context = (
+        f"Question:\n{question.strip()}\n\n"
+        f"Options:\n{_options_block(options)}\n\n"
+        f"Previous attempt:\n{previous.strip()}"
+    )
+    return _wrap(
+        "answer reflection",
+        (
+            "Critique the previous attempt, correct a wrong option choice, "
+            "and put the revised option letter in answer."
+        ),
+        schema,
+        context,
+    )
 
 
 def cot_prompt(question: str, options: list[str]) -> str:

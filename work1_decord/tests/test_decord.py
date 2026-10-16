@@ -4,8 +4,18 @@ from pathlib import Path
 import pytest
 
 from decord.metrics import dcdi, normalized_confidence, reasoning_matches, summarize_predictions
-from decord.pipeline import GenerateConfig, run_confidence_reflection, run_cot, run_standard
-from decord.prompts import decision_prompt, reasoning_prompt
+from decord.pipeline import (
+    METHODS,
+    RUNNERS,
+    GenerateConfig,
+    run_confidence_reflection,
+    run_cot,
+    run_direct,
+    run_plan_and_solve,
+    run_reflexion,
+    run_standard,
+)
+from decord.prompts import decision_prompt, direct_prompt, plan_prompt, reasoning_prompt, reflexion_prompt
 
 
 class ScriptedClient:
@@ -160,6 +170,77 @@ def test_transport_error_is_not_scored_as_a_valid_miss():
     assert summary["n_valid"] == 0
     assert summary["accuracy_full"] == 0.0
     assert summary["failures"]["error"] == 1
+
+
+def test_direct_sees_options_and_returns_only_the_letter():
+    client = ScriptedClient([json.dumps({"answer": "C"})])
+    result = run_direct(
+        client,
+        question="How long?",
+        options=["A) 10", "B) 11", "C) 12"],
+        gold="C",
+    )
+    assert result["pred"] == "C"
+    assert result["n_calls"] == 1
+    assert "A) 10" in client.prompts[0]
+    assert "Reply with the option letter only." in client.prompts[0]
+
+
+def test_plan_and_solve_is_two_calls_and_the_second_reads_the_plan():
+    client = ScriptedClient(
+        [
+            json.dumps({"plan": "Compute the time from the speed."}),
+            json.dumps({"reasoning": "100 / 10 = 10", "answer": "A"}),
+        ]
+    )
+    result = run_plan_and_solve(
+        client,
+        question="How long?",
+        options=["A) 10 hours", "B) 11 hours"],
+        gold="A",
+    )
+    assert result["n_calls"] == 2
+    assert result["pred"] == "A"
+    assert "devise a plan" in client.prompts[0]
+    assert "A) 10 hours" in client.prompts[0]
+    assert "Compute the time from the speed." in client.prompts[1]
+    assert "A) 10 hours" in client.prompts[1]
+
+
+def test_reflexion_revises_once_and_does_not_sample():
+    client = ScriptedClient(
+        [
+            json.dumps({"reasoning": "Maybe 10.", "answer": "A"}),
+            json.dumps({"critique": "The conclusion was 11.", "answer": "B"}),
+        ]
+    )
+    result = run_reflexion(
+        client,
+        question="How long?",
+        options=["A) 10", "B) 11"],
+        gold="B",
+    )
+    assert result["n_calls"] == 2
+    assert result["pred"] == "B"
+    assert len(client.prompts) == 2
+    assert "Previous attempt" in client.prompts[1]
+    assert "Maybe 10." in client.prompts[1]
+
+
+def test_reasoning_prompt_still_hides_the_direct_and_plan_context():
+    stem = "Shweta rides 15 km. How long for 100 km?"
+    options = ["A) 10 hours", "B) 11 hours"]
+    hidden = reasoning_prompt(stem)
+    shown = direct_prompt(stem, options)
+    planned = plan_prompt(stem, options)
+    revised = reflexion_prompt(stem, options, "answer A")
+    assert "A) 10 hours" not in hidden
+    assert "A) 10 hours" in shown and "A) 10 hours" in planned and "A) 10 hours" in revised
+
+
+def test_runner_registry_matches_the_six_methods():
+    assert tuple(RUNNERS) == METHODS
+    assert len(METHODS) == 6
 
 
 def test_archived_tables_stay_separate():
