@@ -3,7 +3,7 @@ from pathlib import Path
 
 from decord.data import Item
 from decord.pipeline import GenerateConfig
-from decord.record import append_prediction, load_saved_questions, prediction_row, run_letter_log
+from decord.record import append_prediction, load_saved_rows, prediction_row, run_letter_log
 
 
 class ScriptedClient:
@@ -42,8 +42,8 @@ def test_partial_tail_is_dropped_and_completed_questions_are_skipped(tmp_path: P
     append_prediction(path, "Question 0", "A", "D")
     with path.open("ab") as handle:
         handle.write(b'{"question": "Question 1", "answer":')
-    done = load_saved_questions(path)
-    assert done == {"Question 0"}
+    done = load_saved_rows(path)
+    assert done == [{"question": "Question 0", "answer": "A", "pred": "D"}]
     assert path.read_bytes().endswith(b"\n")
     assert b"Question 1" not in path.read_bytes()
 
@@ -91,3 +91,27 @@ def test_failed_call_is_not_saved_so_a_rerun_can_retry(tmp_path: Path):
     row = json.loads(path.read_text(encoding="utf-8"))
     assert row["pred"] == "B"
     assert row["answer"] == "B"
+
+
+def test_repeated_question_text_is_saved_twice(tmp_path: Path):
+    path = tmp_path / "mmlu_direct.jsonl"
+    first = _item(0, "A")
+    second = Item(
+        id="mmlu-other-0002",
+        dataset="mmlu",
+        subset="other",
+        subject="college_medicine",
+        question=first.question,
+        options=["A) one", "B) two"],
+        answer="D",
+    )
+    client = ScriptedClient([json.dumps({"answer": "A"}), json.dumps({"answer": "D"})])
+    counts = run_letter_log(output=path, items=[first, second], client=client, config=GenerateConfig())
+    assert counts == {"written": 2, "skipped": 0, "errors": 0}
+    rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
+    assert rows == [
+        {"question": "Question 0", "answer": "A", "pred": "A"},
+        {"question": "Question 0", "answer": "D", "pred": "D"},
+    ]
+    again = run_letter_log(output=path, items=[first, second], client=ScriptedClient([]), config=GenerateConfig())
+    assert again == {"written": 0, "skipped": 2, "errors": 0}

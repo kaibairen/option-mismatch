@@ -25,16 +25,16 @@ def prediction_row(question: str, answer: str, pred: str) -> dict[str, str]:
     return {"question": question, "answer": answer, "pred": pred}
 
 
-def load_saved_questions(path: Path) -> set[str]:
-    """Return questions already stored. A corrupt final line is truncated."""
+def load_saved_rows(path: Path) -> list[dict[str, str]]:
+    """Return stored rows in order. A corrupt final line is truncated."""
 
     if not path.is_file():
-        return set()
+        return []
     data = path.read_bytes()
     if not data:
-        return set()
+        return []
     parts = data.split(b"\n")
-    done: set[str] = set()
+    rows: list[dict[str, str]] = []
     keep: list[bytes] = []
     for index, part in enumerate(parts):
         if part == b"":
@@ -47,12 +47,12 @@ def load_saved_questions(path: Path) -> set[str]:
             break
         if not isinstance(row, dict) or any(key not in row for key in REQUIRED_KEYS):
             raise ValueError(f"{path}:{index + 1} is missing question, answer, or pred")
-        done.add(str(row["question"]))
+        rows.append({key: str(row[key]) for key in REQUIRED_KEYS})
         keep.append(part)
     rebuilt = b"\n".join(keep) + (b"\n" if keep else b"")
     if rebuilt != data:
         path.write_bytes(rebuilt)
-    return done
+    return rows
 
 
 def append_prediction(path: Path, question: str, answer: str, pred: str) -> None:
@@ -92,15 +92,17 @@ def run_letter_log(
             timeout_s=request_timeout_s,
             extra_body=dict(extra_body or {}),
         )
-    done = load_saved_questions(output)
+    saved = load_saved_rows(output)
+    if len(saved) > len(items):
+        raise ValueError(f"{output} has {len(saved)} rows for {len(items)} items")
+    for index, row in enumerate(saved):
+        item = items[index]
+        if row["question"] != item.question or row["answer"] != item.answer:
+            raise ValueError(f"{output}:{index + 1} does not match {item.id}")
     written = 0
-    skipped = 0
     errors = 0
     total = len(items)
-    for index, item in enumerate(items, start=1):
-        if item.question in done:
-            skipped += 1
-            continue
+    for index, item in enumerate(items[len(saved) :], start=len(saved) + 1):
         result = runner(
             chat,
             question=item.question,
@@ -111,30 +113,33 @@ def run_letter_log(
         if result.get("status") == "error":
             errors += 1
             print(f"{index}/{total} error {item.id} {result.get('error')}", file=sys.stderr)
-            continue
+            break
         append_prediction(output, item.question, item.answer, str(result.get("pred") or ""))
-        done.add(item.question)
         written += 1
         print(f"{index}/{total} saved", file=sys.stderr)
-    return {"written": written, "skipped": skipped, "errors": errors}
+    return {"written": written, "skipped": len(saved), "errors": errors}
 
 
-def aqua_items() -> list[Item]:
-    return [item for item in load_experiment_items() if item.dataset == "aqua_rat"]
+def dataset_items(dataset: str) -> list[Item]:
+    name = {"aqua": "aqua_rat", "aqua_rat": "aqua_rat", "mmlu": "mmlu"}.get(dataset)
+    if name is None:
+        raise ValueError(f"unknown dataset: {dataset}")
+    return [item for item in load_experiment_items() if item.dataset == name]
 
 
 def main(argv: list[str] | None = None) -> None:
     import argparse
     import os
 
-    parser = argparse.ArgumentParser(description="Save one AQUA prediction per finished item")
+    parser = argparse.ArgumentParser(description="Save one prediction per finished item")
     parser.add_argument("command", nargs="?", default="record")
     parser.add_argument("--model", required=True)
     parser.add_argument("--method", default="direct")
+    parser.add_argument("--dataset", default="aqua_rat", choices=("aqua", "aqua_rat", "mmlu"))
     parser.add_argument("--output", required=True)
     parser.add_argument("--limit", type=int, default=0)
     args = parser.parse_args(argv)
-    items = aqua_items()
+    items = dataset_items(args.dataset)
     if args.limit > 0:
         items = items[: args.limit]
     extra: dict[str, Any] = {}
