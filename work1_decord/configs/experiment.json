@@ -18,8 +18,7 @@
     "cot",
     "plan_and_solve",
     "reflexion",
-    "decord_standard",
-    "decord_confidence_reflection"
+    "decord_standard"
   ],
   "temperature": 0.4,
   "top_p": 1.0,
@@ -33,7 +32,7 @@
     "prompting": "Zero-shot. No MMLU 5-shot dev items and no AQUA rationales.",
     "plan_and_solve": "Wang et al. ACL 2023 put the plan and the solution in one trigger. This runner uses two calls so the solve step reads the plan text. Both calls see the options.",
     "reflexion": "One coupled CoT call plus one critique. No sampling, no vote, no further retry.",
-    "confidence": "Decision step is sampled sample_k times. Confidence is 1 - H(p) / log(M). Below 0.5 triggers one reflection.",
+    "decord": "This grid runs decord_standard only: one stem-only reasoning call and one option match. Confidence reflection is implemented and is not in methods.",
     "scoring": "accuracy_full keeps failures in the denominator. MMLU category and overall scores are unweighted means of subject accuracies.",
     "endpoint": "Set BASE_URL to the OpenAI-compatible root, including /v1, and API_KEY in the environment. The runner does not read a key from this file."
   }

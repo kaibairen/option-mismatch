@@ -88,15 +88,21 @@ def test_locked_question_list_is_aqua_254_and_mmlu_40_per_subject():
     assert all(not hasattr(item, "meta") for item in items[:3])
 
 
-def test_dry_run_counts_fourteen_calls_before_reflection():
+def test_dry_run_counts_eight_calls_without_confidence_reflection():
     report = dry_run_report()
     assert report["n_items"] == 2534
     assert report["n_by_dataset"] == {"aqua_rat": 254, "mmlu": 2280}
     assert report["n_subjects"] == 57
-    assert sum(report["calls_per_item_no_reflection"].values()) == 14
-    assert report["calls_per_model_no_reflection"] == 2534 * 14
-    assert report["calls_per_item_if_every_item_reflects"]["decord_confidence_reflection"] == 7
-    assert report["calls_per_model_if_every_item_reflects"] == 2534 * 15
+    assert report["methods"] == list(METHODS)
+    assert "decord_confidence_reflection" not in report["methods"]
+    assert report["calls_per_item"] == {
+        "direct": 1,
+        "cot": 1,
+        "plan_and_solve": 2,
+        "reflexion": 2,
+        "decord_standard": 2,
+    }
+    assert report["calls_per_model"] == 2534 * 8
 
 
 def test_mmlu_overall_is_the_unweighted_mean_of_subjects():

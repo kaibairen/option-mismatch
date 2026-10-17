@@ -238,9 +238,16 @@ def test_reasoning_prompt_still_hides_the_direct_and_plan_context():
     assert "A) 10 hours" in shown and "A) 10 hours" in planned and "A) 10 hours" in revised
 
 
-def test_runner_registry_matches_the_six_methods():
-    assert tuple(RUNNERS) == METHODS
-    assert len(METHODS) == 6
+def test_experiment_methods_omit_confidence_reflection():
+    assert METHODS == (
+        "direct",
+        "cot",
+        "plan_and_solve",
+        "reflexion",
+        "decord_standard",
+    )
+    assert set(METHODS) <= set(RUNNERS)
+    assert "decord_confidence_reflection" in RUNNERS
 
 
 def test_archived_tables_stay_separate():

@@ -1,4 +1,4 @@
-"""Six zero-shot systems on one multiple-choice item.
+"""Zero-shot systems on one multiple-choice item.
 
 Coupled baselines see the stem and the options in every call: direct, CoT,
 Plan-and-Solve, and one-revision Reflexion. DecoRD reasoning sees the stem
@@ -31,7 +31,6 @@ METHODS = (
     "plan_and_solve",
     "reflexion",
     "decord_standard",
-    "decord_confidence_reflection",
 )
 
 

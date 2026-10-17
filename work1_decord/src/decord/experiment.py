@@ -1,8 +1,10 @@
 """Run and score the locked Work 1 grid.
 
-Three models, six zero-shot systems, AQUA-RAT test plus MMLU subject-40.
-A real run appends JSONL under ``work1_decord/runs/`` and skips item ids
-already present. ``--dry-run`` only counts calls.
+Three models, five zero-shot systems, AQUA-RAT test plus MMLU subject-40.
+DecoRD is one reasoning call and one decision call. Confidence reflection
+stays implemented and is not part of this grid. A real run appends JSONL
+under ``work1_decord/runs/`` and skips item ids already present.
+``--dry-run`` only counts calls.
 """
 
 from __future__ import annotations
@@ -48,20 +50,19 @@ def dry_run_report(config: dict[str, Any] | None = None, items: list[Item] | Non
         by_dataset[item.dataset] = by_dataset.get(item.dataset, 0) + 1
         if item.subject:
             subjects[item.subject] = subjects.get(item.subject, 0) + 1
-    no_reflection = calls_per_item(sample_k, reflect_every_item=False)
-    every_reflection = calls_per_item(sample_k, reflect_every_item=True)
+    catalog = calls_per_item(sample_k, reflect_every_item=False)
+    selected = [method for method in settings["methods"]]
+    per_item = {method: catalog[method] for method in selected}
     n_items = len(question_list)
     return {
         "models": [model["id"] for model in settings["models"]],
-        "methods": list(settings["methods"]),
+        "methods": selected,
         "n_items": n_items,
         "n_by_dataset": by_dataset,
         "n_subjects": len(subjects),
         "subject_sizes": subjects,
-        "calls_per_item_no_reflection": no_reflection,
-        "calls_per_item_if_every_item_reflects": every_reflection,
-        "calls_per_model_no_reflection": n_items * sum(no_reflection[method] for method in settings["methods"]),
-        "calls_per_model_if_every_item_reflects": n_items * sum(every_reflection[method] for method in settings["methods"]),
+        "calls_per_item": per_item,
+        "calls_per_model": n_items * sum(per_item.values()),
     }
 
 
