@@ -162,6 +162,49 @@ def test_high_confidence_skips_reflection():
     assert len(client.prompts) == 3
 
 
+def test_finished_cot_json_is_one_call_and_reads_only_the_answer_field():
+    client = ScriptedClient([json.dumps({"reasoning": "36 is the multiple.", "answer": "C"})])
+    result = run_cot(client, question="Which multiple?", options=["A) 15", "C) 36"], gold="C")
+    assert result["status"] == "ok"
+    assert result["pred"] == "C"
+    assert result["n_calls"] == 1
+    assert client.kwargs[0]["max_tokens"] == 2048
+
+
+def test_truncated_cot_continues_once_and_does_not_scrape_a_letter():
+    client = ScriptedClient(
+        [
+            '{"reasoning": "distance $d = x_1 - x_2$ and then',
+            json.dumps({"answer": "A"}),
+        ]
+    )
+    result = run_cot(
+        client,
+        question="How long?",
+        options=["A) 5(√3 + 1)", "D) 8(√3 – 2)"],
+        gold="A",
+    )
+    assert result["pred"] == "A"
+    assert result["n_calls"] == 2
+    assert result["correct"] is True
+    assert client.kwargs[1]["max_tokens"] == 256
+    assert "Partial reply" in client.prompts[1]
+
+
+def test_cot_with_no_answer_field_stays_blank():
+    client = ScriptedClient(
+        [
+            "the distance is $d = 5$",
+            json.dumps({"reasoning": "still no letter"}),
+        ]
+    )
+    result = run_cot(client, question="Q", options=["A) 1", "B) 2"], gold="A")
+    assert result["pred"] == ""
+    assert result["status"] == "no_letter"
+    assert result["n_calls"] == 2
+    assert result["correct"] is False
+
+
 def test_transport_error_is_not_scored_as_a_valid_miss():
     client = ScriptedClient([RuntimeError("timed out")])
     result = run_cot(client, question="Q", options=["A) 1", "B) 2"], gold="A")

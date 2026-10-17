@@ -182,3 +182,20 @@ def cot_prompt(question: str, options: list[str]) -> str:
         schema,
         context,
     )
+
+
+def cot_continue_prompt(question: str, options: list[str], partial: str) -> str:
+    """Second call when the first CoT reply was cut off before ``answer``."""
+
+    schema = {"answer": "A"}
+    context = (
+        f"Question:\n{question.strip()}\n\n"
+        f"Options:\n{_options_block(options)}\n\n"
+        f"Partial reply:\n{partial.strip()}"
+    )
+    return _wrap(
+        "multiple-choice solving",
+        "The partial reply was cut off before the final answer. Using that reasoning, put the option letter in answer.",
+        schema,
+        context,
+    )

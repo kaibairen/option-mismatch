@@ -11,6 +11,19 @@ FENCED = re.compile(r"```(?:json)?\s*(.*?)```", re.IGNORECASE | re.DOTALL)
 BRACED = re.compile(r"\{.*\}", re.DOTALL)
 
 
+def answer_letter(text: str) -> str:
+    """Letter from a parsed ``answer`` field. Incomplete JSON yields nothing."""
+
+    payload = parse_json_object(text)
+    if not isinstance(payload, dict):
+        return ""
+    value = payload.get("answer")
+    if not isinstance(value, str):
+        return ""
+    match = LETTER.search(value.upper())
+    return match.group(1).upper() if match else ""
+
+
 def extract_letter(text: str) -> str:
     """Prefer an explicit answer field, then the last standalone A–E."""
 

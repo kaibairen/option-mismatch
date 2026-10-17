@@ -38,7 +38,7 @@ class OpenAIChatClient:
         payload.update(self.extra_body)
         return payload
 
-    def complete(self, prompt: str, *, temperature: float, top_p: float, max_tokens: int) -> str:
+    def complete_details(self, prompt: str, *, temperature: float, top_p: float, max_tokens: int) -> dict:
         if not self.api_key:
             raise ChatError("API_KEY is empty")
         if not self.model:
@@ -64,10 +64,16 @@ class OpenAIChatClient:
         except urllib.error.URLError as exc:
             raise ChatError(f"transport error: {exc.reason}") from exc
         try:
-            message = body["choices"][0]["message"]
+            choice = body["choices"][0]
+            message = choice["message"]
             content = message["content"] if isinstance(message, dict) else None
+            finish_reason = choice.get("finish_reason") or ""
         except (KeyError, IndexError, TypeError) as exc:
             raise ChatError(f"response has no message content: {body}") from exc
-        if content is None:
-            return ""
-        return str(content)
+        return {
+            "content": "" if content is None else str(content),
+            "finish_reason": str(finish_reason),
+        }
+
+    def complete(self, prompt: str, *, temperature: float, top_p: float, max_tokens: int) -> str:
+        return self.complete_details(prompt, temperature=temperature, top_p=top_p, max_tokens=max_tokens)["content"]

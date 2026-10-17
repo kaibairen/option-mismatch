@@ -11,8 +11,9 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from decord.metrics import majority_letter, normalized_confidence, reasoning_matches
-from decord.parse import extract_letter, parse_json_object
+from decord.parse import answer_letter, extract_letter, parse_json_object
 from decord.prompts import (
+    cot_continue_prompt,
     cot_prompt,
     decision_prompt,
     direct_prompt,
@@ -22,6 +23,9 @@ from decord.prompts import (
     reflexion_prompt,
     solve_prompt,
 )
+
+COT_MAX_TOKENS = 2048
+COT_CONTINUE_MAX_TOKENS = 256
 
 LETTERS = "ABCDE"
 
@@ -70,12 +74,31 @@ def option_letters(options: list[str]) -> list[str]:
     return found or list(LETTERS)
 
 
-def _complete(client: ChatClient, prompt: str, config: GenerateConfig) -> tuple[str, str]:
+def _with_max_tokens(config: GenerateConfig, max_tokens: int) -> GenerateConfig:
+    return GenerateConfig(
+        temperature=config.temperature,
+        top_p=config.top_p,
+        max_tokens=max_tokens,
+        sample_k=config.sample_k,
+        confidence_threshold=config.confidence_threshold,
+    )
+
+
+def _complete_meta(client: ChatClient, prompt: str, config: GenerateConfig) -> tuple[str, str, str]:
+    details = getattr(client, "complete_details", None)
     try:
+        if details is not None:
+            payload = details(prompt, **config.as_kwargs())
+            return str(payload.get("content") or ""), "", str(payload.get("finish_reason") or "")
         text = client.complete(prompt, **config.as_kwargs())
     except Exception as exc:  # noqa: BLE001 — recorded per item, not hidden
-        return "", f"{type(exc).__name__}: {exc}"
-    return text or "", ""
+        return "", f"{type(exc).__name__}: {exc}", ""
+    return text or "", "", ""
+
+
+def _complete(client: ChatClient, prompt: str, config: GenerateConfig) -> tuple[str, str]:
+    text, error, _finish = _complete_meta(client, prompt, config)
+    return text, error
 
 
 def _status_for(text: str, error: str, letter: str) -> str:
@@ -96,10 +119,31 @@ def run_cot(
     gold: str,
     config: GenerateConfig | None = None,
 ) -> dict[str, Any]:
+    """One reasoning call of up to 2048 tokens. A cut-off reply gets one short continuation.
+
+    The letter comes only from a parsed ``answer`` field. A truncated trace does not
+    donate a letter from the reasoning text.
+    """
+
     settings = config or GenerateConfig()
     prompt = cot_prompt(question, options)
-    text, error = _complete(client, prompt, settings)
-    letter = extract_letter(text) if text else ""
+    text, error, finish = _complete_meta(client, prompt, _with_max_tokens(settings, COT_MAX_TOKENS))
+    raw: dict[str, Any] = {"cot": text, "finish_reason": finish}
+    n_calls = 1
+    letter = answer_letter(text) if text else ""
+    if not error and text.strip() and not letter:
+        n_calls = 2
+        continued, continue_error, continue_finish = _complete_meta(
+            client,
+            cot_continue_prompt(question, options, text),
+            _with_max_tokens(settings, COT_CONTINUE_MAX_TOKENS),
+        )
+        raw["cot_continue"] = continued
+        raw["continue_finish_reason"] = continue_finish
+        if continue_error:
+            raw["continue_error"] = continue_error
+        letter = answer_letter(continued) if continued else ""
+        text = continued or text
     gold_letter = (gold or "").strip().upper()[:1]
     return {
         "method": "cot",
@@ -108,8 +152,8 @@ def run_cot(
         "correct": bool(letter) and letter == gold_letter,
         "reasoning_correct": None,
         "error": error,
-        "n_calls": 1,
-        "raw": {"cot": text},
+        "n_calls": n_calls,
+        "raw": raw,
     }
 
 
