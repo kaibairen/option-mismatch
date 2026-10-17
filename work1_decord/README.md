@@ -34,6 +34,14 @@ PYTHONPATH=src python -m decord score --runs runs
 
 `--dry-run` 不访问网络。正式运行把每题一行写到 `runs/<model>/<method>.jsonl`，已经写过的题会跳过。`runs/` 不进 git。
 
+AQUA 的逐题记录用 `record`。每答完一题就追加一行 `{"question","answer","pred"}` 并 `fsync`。请求失败的题不写入，下次从断点继续。文件末尾如果是写到一半的半行，恢复时会丢掉这一行再重跑该题。
+
+```bash
+BASE_URL=http://127.0.0.1:16006/v1 API_KEY=local \
+PYTHONPATH=src python -m decord record --model qwen3.5-9b --method direct \
+  --output runs/qwen3.5-9b/aqua_direct.jsonl
+```
+
 ## 已有结果
 
 `reports/` 里是三套已经打印出来的数，导入包不会重算它们。
