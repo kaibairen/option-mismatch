@@ -13,17 +13,19 @@ BRACED = re.compile(r"\{.*\}", re.DOTALL)
 
 COT_ANSWER = re.compile(
     r"(?:\*+)?(?:therefore,\s*among\s+[A-E]\s+through\s+[A-E],\s*)?"
-    r"(?:the\s+)?(?:final\s+)?\banswer\b(?:\*+)?\s*(?:is\b\s*)?[:：]?\s*(?:\*+)?\s*[\(\[]?\s*([A-E])\b",
+    r"(?:the\s+)?(?:final\s+)?\banswer\b(?:\*+)?\s*(?:is\b\s*)?[:：]?\s*(?:\*+)?\s*[\(\[]?\s*([A-E])\b"
+    r"|(?:the\s+)?correct\s+(?:option|choice)\s+is\s*(?:\*+)?\s*[\(\[]?\s*([A-E])\b"
+    r"|(?:corresponds\s+to|matches)\s+option\s*(?:\*+)?\s*[\(\[]?\s*([A-E])\b",
     re.IGNORECASE,
 )
 
 
 def cot_answer_letter(text: str) -> str:
-    """Last explicit answer sentence. A letter inside the reasoning does not count."""
+    """Last stated choice. A letter used only as a variable or an option label does not count."""
 
     found: list[str] = []
     for match in COT_ANSWER.finditer(text or ""):
-        letter = match.group(1)
+        letter = next((group for group in match.groups() if group), "")
         if letter:
             found.append(letter.upper())
     return found[-1] if found else ""

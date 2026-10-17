@@ -214,6 +214,13 @@ def test_cot_reads_a_markdown_answer_line_and_ignores_option_mentions():
     assert result["n_calls"] == 1
 
 
+def test_cot_reads_a_correct_option_line():
+    client = ScriptedClient(["The greatest value is 0.26.\n\nThe correct option is **(B)**."])
+    result = run_cot(client, question="Q", options=["A) 0.22", "B) 0.26"], gold="B")
+    assert result["pred"] == "B"
+    assert result["n_calls"] == 1
+
+
 def test_transport_error_is_not_scored_as_a_valid_miss():
     client = ScriptedClient([RuntimeError("timed out")])
     result = run_cot(client, question="Q", options=["A) 1", "B) 2"], gold="A")
