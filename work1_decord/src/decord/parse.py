@@ -11,17 +11,22 @@ FENCED = re.compile(r"```(?:json)?\s*(.*?)```", re.IGNORECASE | re.DOTALL)
 BRACED = re.compile(r"\{.*\}", re.DOTALL)
 
 
-def answer_letter(text: str) -> str:
-    """Letter from a parsed ``answer`` field. Incomplete JSON yields nothing."""
+COT_ANSWER = re.compile(
+    r"(?:\*+)?(?:therefore,\s*among\s+[A-E]\s+through\s+[A-E],\s*)?"
+    r"(?:the\s+)?(?:final\s+)?\banswer\b(?:\*+)?\s*(?:is\b\s*)?[:：]?\s*(?:\*+)?\s*[\(\[]?\s*([A-E])\b",
+    re.IGNORECASE,
+)
 
-    payload = parse_json_object(text)
-    if not isinstance(payload, dict):
-        return ""
-    value = payload.get("answer")
-    if not isinstance(value, str):
-        return ""
-    match = LETTER.search(value.upper())
-    return match.group(1).upper() if match else ""
+
+def cot_answer_letter(text: str) -> str:
+    """Last explicit answer sentence. A letter inside the reasoning does not count."""
+
+    found: list[str] = []
+    for match in COT_ANSWER.finditer(text or ""):
+        letter = match.group(1)
+        if letter:
+            found.append(letter.upper())
+    return found[-1] if found else ""
 
 
 def extract_letter(text: str) -> str:

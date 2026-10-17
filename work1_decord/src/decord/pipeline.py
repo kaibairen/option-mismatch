@@ -11,9 +11,8 @@ from dataclasses import dataclass
 from typing import Any, Protocol
 
 from decord.metrics import majority_letter, normalized_confidence, reasoning_matches
-from decord.parse import answer_letter, extract_letter, parse_json_object
+from decord.parse import cot_answer_letter, extract_letter, parse_json_object
 from decord.prompts import (
-    cot_continue_prompt,
     cot_prompt,
     decision_prompt,
     direct_prompt,
@@ -25,7 +24,6 @@ from decord.prompts import (
 )
 
 COT_MAX_TOKENS = 2048
-COT_CONTINUE_MAX_TOKENS = 256
 
 LETTERS = "ABCDE"
 
@@ -119,31 +117,17 @@ def run_cot(
     gold: str,
     config: GenerateConfig | None = None,
 ) -> dict[str, Any]:
-    """One reasoning call of up to 2048 tokens. A cut-off reply gets one short continuation.
+    """One zero-shot CoT completion. No follow-up call fills in a missing letter.
 
-    The letter comes only from a parsed ``answer`` field. A truncated trace does not
-    donate a letter from the reasoning text.
+    The letter is the last ``answer is X`` or ``Final answer: X`` in that completion.
+    A trace that stops before such a sentence, including one cut off by the token
+    limit, is left blank.
     """
 
     settings = config or GenerateConfig()
     prompt = cot_prompt(question, options)
-    text, error, finish = _complete_meta(client, prompt, _with_max_tokens(settings, COT_MAX_TOKENS))
-    raw: dict[str, Any] = {"cot": text, "finish_reason": finish}
-    n_calls = 1
-    letter = answer_letter(text) if text else ""
-    if not error and text.strip() and not letter:
-        n_calls = 2
-        continued, continue_error, continue_finish = _complete_meta(
-            client,
-            cot_continue_prompt(question, options, text),
-            _with_max_tokens(settings, COT_CONTINUE_MAX_TOKENS),
-        )
-        raw["cot_continue"] = continued
-        raw["continue_finish_reason"] = continue_finish
-        if continue_error:
-            raw["continue_error"] = continue_error
-        letter = answer_letter(continued) if continued else ""
-        text = continued or text
+    text, error = _complete(client, prompt, _with_max_tokens(settings, COT_MAX_TOKENS))
+    letter = cot_answer_letter(text) if text else ""
     gold_letter = (gold or "").strip().upper()[:1]
     return {
         "method": "cot",
@@ -152,8 +136,8 @@ def run_cot(
         "correct": bool(letter) and letter == gold_letter,
         "reasoning_correct": None,
         "error": error,
-        "n_calls": n_calls,
-        "raw": raw,
+        "n_calls": 1,
+        "raw": {"cot": text},
     }
 
 

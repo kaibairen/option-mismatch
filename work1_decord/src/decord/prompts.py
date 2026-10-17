@@ -174,28 +174,20 @@ def reflexion_prompt(question: str, options: list[str], previous: str) -> str:
 
 
 def cot_prompt(question: str, options: list[str]) -> str:
-    schema = {"reasoning": "", "answer": "A"}
-    context = f"Question:\n{question.strip()}\n\nOptions:\n{_options_block(options)}"
-    return _wrap(
-        "multiple-choice solving",
-        "Let's think step by step. Then put the final option letter in answer.",
-        schema,
-        context,
-    )
+    """Zero-shot CoT trigger from Kojima et al. 2022, with the options in the question.
 
+    The completion starts after ``Let's think step by step.`` There is no JSON
+    schema and no second call that fills in a missing letter.
+    """
 
-def cot_continue_prompt(question: str, options: list[str], partial: str) -> str:
-    """Second call when the first CoT reply was cut off before ``answer``."""
-
-    schema = {"answer": "A"}
-    context = (
-        f"Question:\n{question.strip()}\n\n"
-        f"Options:\n{_options_block(options)}\n\n"
-        f"Partial reply:\n{partial.strip()}"
-    )
-    return _wrap(
-        "multiple-choice solving",
-        "The partial reply was cut off before the final answer. Using that reasoning, put the option letter in answer.",
-        schema,
-        context,
+    choices: list[str] = []
+    for option in options:
+        text = str(option).strip()
+        if len(text) >= 2 and text[0] in "ABCDE" and text[1] == ")":
+            choices.append(f"({text[0]}) {text[2:].strip()}")
+        else:
+            choices.append(text)
+    return (
+        f"Q: {question.strip()} Answer Choices: {' '.join(choices)}\n"
+        "A: Let's think step by step."
     )

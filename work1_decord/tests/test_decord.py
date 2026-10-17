@@ -162,47 +162,56 @@ def test_high_confidence_skips_reflection():
     assert len(client.prompts) == 3
 
 
-def test_finished_cot_json_is_one_call_and_reads_only_the_answer_field():
-    client = ScriptedClient([json.dumps({"reasoning": "36 is the multiple.", "answer": "C"})])
+def test_finished_cot_is_one_call_and_reads_the_answer_sentence():
+    client = ScriptedClient(["36 is the multiple. The answer is (C)."])
     result = run_cot(client, question="Which multiple?", options=["A) 15", "C) 36"], gold="C")
     assert result["status"] == "ok"
     assert result["pred"] == "C"
     assert result["n_calls"] == 1
     assert client.kwargs[0]["max_tokens"] == 2048
+    assert client.prompts[0].startswith("Q: Which multiple? Answer Choices: (A) 15 (C) 36")
+    assert client.prompts[0].rstrip().endswith("A: Let's think step by step.")
+    assert "reasoning" not in client.prompts[0]
+    assert "Partial reply" not in client.prompts[0]
 
 
-def test_truncated_cot_continues_once_and_does_not_scrape_a_letter():
-    client = ScriptedClient(
-        [
-            '{"reasoning": "distance $d = x_1 - x_2$ and then',
-            json.dumps({"answer": "A"}),
-        ]
-    )
+def test_truncated_cot_does_not_scrape_a_letter_or_ask_again():
+    client = ScriptedClient(['distance $d = x_1 - x_2$ and option A looks long'])
     result = run_cot(
         client,
         question="How long?",
         options=["A) 5(√3 + 1)", "D) 8(√3 – 2)"],
         gold="A",
     )
-    assert result["pred"] == "A"
-    assert result["n_calls"] == 2
-    assert result["correct"] is True
-    assert client.kwargs[1]["max_tokens"] == 256
-    assert "Partial reply" in client.prompts[1]
+    assert result["pred"] == ""
+    assert result["status"] == "no_letter"
+    assert result["n_calls"] == 1
+    assert result["correct"] is False
+    assert len(client.prompts) == 1
 
 
-def test_cot_with_no_answer_field_stays_blank():
-    client = ScriptedClient(
-        [
-            "the distance is $d = 5$",
-            json.dumps({"reasoning": "still no letter"}),
-        ]
-    )
+def test_cot_without_an_answer_sentence_stays_blank():
+    client = ScriptedClient(["the distance is $d = 5$"])
     result = run_cot(client, question="Q", options=["A) 1", "B) 2"], gold="A")
     assert result["pred"] == ""
     assert result["status"] == "no_letter"
-    assert result["n_calls"] == 2
+    assert result["n_calls"] == 1
     assert result["correct"] is False
+
+
+def test_cot_keeps_the_last_answer_sentence():
+    client = ScriptedClient(["The answer is A. Recalculating gives 11. The answer is B."])
+    result = run_cot(client, question="Q", options=["A) 10", "B) 11"], gold="B")
+    assert result["pred"] == "B"
+    assert result["n_calls"] == 1
+
+
+def test_cot_reads_a_markdown_answer_line_and_ignores_option_mentions():
+    text = "The calculated value matches option (A).\n\n**Answer:** (A)"
+    client = ScriptedClient([text])
+    result = run_cot(client, question="Q", options=["A) 5", "B) 6"], gold="A")
+    assert result["pred"] == "A"
+    assert result["n_calls"] == 1
 
 
 def test_transport_error_is_not_scored_as_a_valid_miss():
