@@ -147,3 +147,84 @@ def summarize_predictions(
         "accuracy_reasoning": reasoning_rate,
         "dcdi": None if reasoning_rate is None else dcdi(reasoning_rate, decision_rate),
     }
+
+
+def _last_row_by_id(rows: Sequence[Mapping[str, Any]]) -> dict[str, Mapping[str, Any]]:
+    indexed: dict[str, Mapping[str, Any]] = {}
+    for row in rows:
+        indexed[str(row["id"])] = row
+    return indexed
+
+
+def _slice_summary(
+    indexed: Mapping[str, Mapping[str, Any]],
+    items: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    recorded = [indexed[str(item["id"])] for item in items if str(item["id"]) in indexed]
+    return summarize_predictions(recorded, n_full=len(items))
+
+
+def score_experiment(
+    rows: Sequence[Mapping[str, Any]],
+    items: Sequence[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Score one model and one method on the locked item list.
+
+    AQUA is one slice of 254. Each MMLU subject is scored on its own locked
+    items, with missing rows kept in ``accuracy_full``. A category score is
+    the unweighted mean of its subject accuracies. The MMLU overall score is
+    the unweighted mean of every subject, not the mean of the four category
+    scores and not a micro average over items. Category DCDI is filled only
+    when every subject in that category has a reasoning accuracy.
+    """
+
+    indexed = _last_row_by_id(rows)
+    aqua_items = [item for item in items if item.get("dataset") == "aqua_rat"]
+    mmlu_items = [item for item in items if item.get("dataset") == "mmlu"]
+    subjects: list[str] = []
+    for item in mmlu_items:
+        subject = str(item.get("subject") or "")
+        if subject and subject not in subjects:
+            subjects.append(subject)
+    per_subject: dict[str, Any] = {}
+    subject_group: dict[str, str] = {}
+    for subject in subjects:
+        owned = [item for item in mmlu_items if item.get("subject") == subject]
+        per_subject[subject] = _slice_summary(indexed, owned)
+        subject_group[subject] = str(owned[0].get("subset") or "")
+    groups: dict[str, list[str]] = {}
+    for subject, group in subject_group.items():
+        groups.setdefault(group, []).append(subject)
+    categories: dict[str, Any] = {}
+    for group, members in groups.items():
+        decision = [per_subject[subject]["accuracy_full"] for subject in members]
+        valid = [per_subject[subject]["accuracy_valid"] for subject in members]
+        reasoning_values = [
+            per_subject[subject]["accuracy_reasoning"]
+            for subject in members
+            if per_subject[subject]["accuracy_reasoning"] is not None
+        ]
+        reasoning_rate = (
+            sum(reasoning_values) / len(reasoning_values)
+            if reasoning_values and len(reasoning_values) == len(members)
+            else None
+        )
+        decision_rate = sum(decision) / len(decision) if decision else 0.0
+        categories[group] = {
+            "n_subjects": len(members),
+            "n_full": sum(per_subject[subject]["n_full"] for subject in members),
+            "accuracy_full": decision_rate,
+            "accuracy_valid": (sum(valid) / len(valid)) if valid else 0.0,
+            "accuracy_reasoning": reasoning_rate,
+            "dcdi": None if reasoning_rate is None else dcdi(reasoning_rate, decision_rate),
+        }
+    subject_rates = [per_subject[subject]["accuracy_full"] for subject in subjects]
+    return {
+        "aqua": _slice_summary(indexed, aqua_items),
+        "mmlu": {
+            "n_subjects": len(subjects),
+            "accuracy_full": (sum(subject_rates) / len(subject_rates)) if subject_rates else 0.0,
+            "categories": categories,
+            "subjects": per_subject,
+        },
+    }
