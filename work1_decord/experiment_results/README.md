@@ -8,7 +8,7 @@
 
 2026-10-20 重新跑的 Direct。温度 0.4，`top_p` 1，`max_tokens` 512，`enable_thinking` 关闭。10 月 17 日那次的逐题文件没有进 git，已经不在磁盘上，这里不是那次的原件。
 
-| 文件 | 数据 |
-| --- | --- |
-| `qwen3.5-9b/aqua_direct.jsonl` | AQUA-RAT test，254 |
-| `qwen3.5-9b/mmlu_direct.jsonl` | MMLU 每科 40 题，2280 |
+| 文件 | 数据 | 结果 |
+| --- | --- | --- |
+| `qwen3.5-9b/aqua_direct.jsonl` | AQUA-RAT test，254 | 94/254 |
+| `qwen3.5-9b/mmlu_direct.jsonl` | MMLU 每科 40 题，2280 | 1792/2280 |
