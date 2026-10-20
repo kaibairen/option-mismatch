@@ -12,3 +12,4 @@
 | --- | --- | --- |
 | `qwen3.5-9b/aqua_direct.jsonl` | AQUA-RAT test，254 | 94/254 |
 | `qwen3.5-9b/mmlu_direct.jsonl` | MMLU 每科 40 题，2280 | 1792/2280 |
+| `qwen3.5-9b/aqua_cot.jsonl` | AQUA-RAT test，254。一次 CoT，最多 2048 token | 211/254 |
