@@ -112,40 +112,28 @@ def direct_prompt(question: str, options: list[str]) -> str:
     )
 
 
-def plan_prompt(question: str, options: list[str]) -> str:
-    """First call of Plan-and-Solve (Wang et al., ACL 2023).
+def _answer_choices(options: list[str]) -> str:
+    choices: list[str] = []
+    for option in options:
+        text = str(option).strip()
+        if len(text) >= 2 and text[0] in "ABCDE" and text[1] == ")":
+            choices.append(f"({text[0]}) {text[2:].strip()}")
+        else:
+            choices.append(text)
+    return "Answer Choices: " + " ".join(choices)
 
-    The paper puts “devise a plan” and “carry out the plan” in one trigger
-    sentence. This runner asks for the plan alone so the next call can read it.
+
+def plan_solve_prompt(question: str, options: list[str]) -> str:
+    """Zero-shot Plan-and-Solve trigger from Wang et al., ACL 2023.
+
+    The plan and the solution are one completion. The trigger replaces
+    ``Let's think step by step`` in the same ``Q:`` / ``A:`` frame as CoT.
     """
 
-    schema = {"plan": ""}
-    context = f"Question:\n{question.strip()}\n\nOptions:\n{_options_block(options)}"
-    return _wrap(
-        "problem planning",
-        (
-            "Let's first understand the problem and devise a plan to solve the problem. "
-            "Do not choose an option letter."
-        ),
-        schema,
-        context,
-    )
-
-
-def solve_prompt(question: str, options: list[str], plan: str) -> str:
-    """Second call of Plan-and-Solve. The plan from the first call is an input."""
-
-    schema = {"reasoning": "", "answer": "A"}
-    context = (
-        f"Question:\n{question.strip()}\n\n"
-        f"Options:\n{_options_block(options)}\n\n"
-        f"Plan:\n{plan.strip()}"
-    )
-    return _wrap(
-        "plan execution",
-        "Carry out the plan and solve the problem step by step. Then put the final option letter in answer.",
-        schema,
-        context,
+    return (
+        f"Q: {question.strip()} {_answer_choices(options)}\n"
+        "A: Let's first understand the problem and devise a plan to solve the problem. "
+        "Then, let's carry out the plan and solve the problem step by step."
     )
 
 
@@ -180,14 +168,7 @@ def cot_prompt(question: str, options: list[str]) -> str:
     schema and no second call that fills in a missing letter.
     """
 
-    choices: list[str] = []
-    for option in options:
-        text = str(option).strip()
-        if len(text) >= 2 and text[0] in "ABCDE" and text[1] == ")":
-            choices.append(f"({text[0]}) {text[2:].strip()}")
-        else:
-            choices.append(text)
     return (
-        f"Q: {question.strip()} Answer Choices: {' '.join(choices)}\n"
+        f"Q: {question.strip()} {_answer_choices(options)}\n"
         "A: Let's think step by step."
     )

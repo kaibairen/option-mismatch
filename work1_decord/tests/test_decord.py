@@ -15,7 +15,7 @@ from decord.pipeline import (
     run_reflexion,
     run_standard,
 )
-from decord.prompts import decision_prompt, direct_prompt, plan_prompt, reasoning_prompt, reflexion_prompt
+from decord.prompts import decision_prompt, direct_prompt, plan_solve_prompt, reasoning_prompt, reflexion_prompt
 
 
 class ScriptedClient:
@@ -245,25 +245,36 @@ def test_direct_sees_options_and_returns_only_the_letter():
     assert "Reply with the option letter only." in client.prompts[0]
 
 
-def test_plan_and_solve_is_two_calls_and_the_second_reads_the_plan():
-    client = ScriptedClient(
-        [
-            json.dumps({"plan": "Compute the time from the speed."}),
-            json.dumps({"reasoning": "100 / 10 = 10", "answer": "A"}),
-        ]
-    )
+def test_plan_and_solve_is_one_completion_and_reads_the_answer_line():
+    client = ScriptedClient(["Plan: divide distance by speed.\n\nAnswer: (A)"])
     result = run_plan_and_solve(
         client,
         question="How long?",
         options=["A) 10 hours", "B) 11 hours"],
         gold="A",
     )
-    assert result["n_calls"] == 2
+    assert result["n_calls"] == 1
     assert result["pred"] == "A"
-    assert "devise a plan" in client.prompts[0]
-    assert "A) 10 hours" in client.prompts[0]
-    assert "Compute the time from the speed." in client.prompts[1]
-    assert "A) 10 hours" in client.prompts[1]
+    assert result["status"] == "ok"
+    assert client.kwargs[0]["max_tokens"] == 2048
+    prompt = client.prompts[0]
+    assert prompt.startswith("Q: How long? Answer Choices: (A) 10 hours (B) 11 hours")
+    assert "devise a plan to solve the problem" in prompt
+    assert "carry out the plan" in prompt
+    assert "reasoning" not in prompt
+
+
+def test_plan_and_solve_ignores_a_letter_that_is_only_in_the_plan():
+    client = ScriptedClient(["Step 1: compare option A with the distance. Step 2: still calculating"])
+    result = run_plan_and_solve(
+        client,
+        question="How long?",
+        options=["A) 10 hours", "B) 11 hours"],
+        gold="A",
+    )
+    assert result["pred"] == ""
+    assert result["status"] == "no_letter"
+    assert result["n_calls"] == 1
 
 
 def test_reflexion_revises_once_and_does_not_sample():
@@ -291,7 +302,7 @@ def test_reasoning_prompt_still_hides_the_direct_and_plan_context():
     options = ["A) 10 hours", "B) 11 hours"]
     hidden = reasoning_prompt(stem)
     shown = direct_prompt(stem, options)
-    planned = plan_prompt(stem, options)
+    planned = plan_solve_prompt(stem, options)
     revised = reflexion_prompt(stem, options, "answer A")
     assert "A) 10 hours" not in hidden
     assert "A) 10 hours" in shown and "A) 10 hours" in planned and "A) 10 hours" in revised

@@ -16,11 +16,10 @@ from decord.prompts import (
     cot_prompt,
     decision_prompt,
     direct_prompt,
-    plan_prompt,
+    plan_solve_prompt,
     reasoning_prompt,
     reflection_prompt,
     reflexion_prompt,
-    solve_prompt,
 )
 
 COT_MAX_TOKENS = 2048
@@ -174,35 +173,26 @@ def run_plan_and_solve(
     gold: str,
     config: GenerateConfig | None = None,
 ) -> dict[str, Any]:
-    """Devise a plan, then carry that plan out. Both calls see the options."""
+    """One Plan-and-Solve completion. The plan and the solution are the same reply.
+
+    The letter is read with the same answer-line rules as CoT. A trace that never
+    states a choice is left blank. There is no second call.
+    """
 
     settings = config or GenerateConfig()
-    plan_text, plan_error = _complete(client, plan_prompt(question, options), settings)
-    if plan_error or not plan_text.strip():
-        return {
-            "method": "plan_and_solve",
-            "status": _status_for(plan_text, plan_error, ""),
-            "pred": "",
-            "correct": False,
-            "reasoning_correct": None,
-            "error": plan_error,
-            "n_calls": 1,
-            "raw": {"plan": plan_text},
-        }
-    payload = parse_json_object(plan_text) or {}
-    plan = str(payload.get("plan") or plan_text)
-    solve_text, solve_error = _complete(client, solve_prompt(question, options, plan), settings)
-    letter = extract_letter(solve_text) if solve_text else ""
+    prompt = plan_solve_prompt(question, options)
+    text, error = _complete(client, prompt, _with_max_tokens(settings, COT_MAX_TOKENS))
+    letter = cot_answer_letter(text) if text else ""
     gold_letter = (gold or "").strip().upper()[:1]
     return {
         "method": "plan_and_solve",
-        "status": _status_for(solve_text, solve_error, letter),
+        "status": _status_for(text, error, letter),
         "pred": letter,
         "correct": bool(letter) and letter == gold_letter,
         "reasoning_correct": None,
-        "error": solve_error,
-        "n_calls": 2,
-        "raw": {"plan": plan_text, "solve": solve_text},
+        "error": error,
+        "n_calls": 1,
+        "raw": {"plan_solve": text},
     }
 
 

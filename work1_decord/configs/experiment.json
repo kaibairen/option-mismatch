@@ -30,7 +30,7 @@
     "models": "qwen3-8b is the open 8B. gpt-4o-mini is the current closed lightweight model. deepseek-v4-pro-guan is the current stronger official model. All three answer directly. Order published tables by measured CoT accuracy.",
     "thinking": "DeepSeek V4 thinks unless the request sets thinking.type to disabled. qwen3-8b receives enable_thinking false. gpt-4o-mini has no thinking switch.",
     "prompting": "Zero-shot. No MMLU 5-shot dev items and no AQUA rationales.",
-    "plan_and_solve": "Wang et al. ACL 2023 put the plan and the solution in one trigger. This runner uses two calls so the solve step reads the plan text. Both calls see the options.",
+    "plan_and_solve": "Wang et al. ACL 2023 replace the CoT trigger with one plan-and-solve sentence. The plan and the solution are the same completion. The letter uses the same answer-line rules as CoT, with no second call.",
     "reflexion": "One coupled CoT call plus one critique. No sampling, no vote, no further retry.",
     "decord": "This grid runs decord_standard only: one stem-only reasoning call and one option match. Confidence reflection is implemented and is not in methods.",
     "scoring": "accuracy_full keeps failures in the denominator. MMLU category and overall scores are unweighted means of subject accuracies.",

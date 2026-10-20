@@ -33,7 +33,7 @@ def calls_per_item(sample_k: int, *, reflect_every_item: bool) -> dict[str, int]
     return {
         "direct": 1,
         "cot": 1,
-        "plan_and_solve": 2,
+        "plan_and_solve": 1,
         "reflexion": 2,
         "decord_standard": 2,
         "decord_confidence_reflection": confidence,

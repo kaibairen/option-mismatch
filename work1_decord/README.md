@@ -20,7 +20,7 @@
 | `gpt-4o-mini` | 当前闭源轻量模型 |
 | `deepseek-v4-pro-guan` | 当前较强的官方模型。请求带 `thinking.type = disabled` |
 
-五个系统都看同一批题。Direct、CoT、Plan-and-Solve、Reflexion 每次调用都看题干和选项。DecoRD 是题干推理一次，再匹配选项一次。Plan-and-Solve 拆成两次调用，第二次读第一次写出的计划。Reflexion 是一次 CoT 再加一次修改，不再重试。置信度反思的函数还在包里，这一轮的 `methods` 不包含它。
+五个系统都看同一批题。Direct、CoT、Plan-and-Solve、Reflexion 每次调用都看题干和选项。DecoRD 是题干推理一次，再匹配选项一次。Plan-and-Solve 用 Wang 等人的一句触发语，计划和求解写在同一次回复里，字母规则与 CoT 相同。Reflexion 是一次 CoT 再加一次修改，不再重试。置信度反思的函数还在包里，这一轮的 `methods` 不包含它。
 
 MMLU 的大类分数和 57 科总分都是学科准确率的不加权平均。AQUA 单独计分，并在 DecoRD 上计算 DCDI。两套数据不合成一个分数。
 
