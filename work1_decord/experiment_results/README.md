@@ -6,7 +6,7 @@
 
 ## qwen3.5-9b
 
-2026-10-20 重新跑的 Direct。温度 0.4，`top_p` 1，`max_tokens` 512，`enable_thinking` 关闭。10 月 17 日那次的逐题文件没有进 git，已经不在磁盘上，这里不是那次的原件。
+2026-10-20 重新跑的 Direct 和 AQUA CoT。温度 0.4，`top_p` 1，`enable_thinking` 关闭。Direct 的 `max_tokens` 是 512。CoT 是一次补全，最多 2048 token，字母只取回复里的答案句。10 月 17 日那次的逐题文件没有进 git，已经不在磁盘上，这里不是那次的原件。
 
 | 文件 | 数据 | 结果 |
 | --- | --- | --- |
