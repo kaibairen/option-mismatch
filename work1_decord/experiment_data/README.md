@@ -18,8 +18,11 @@
 
 ## qwen3.5-27b
 
-2026-10-23 用 `qwen3.5-27b` 跑的 AQUA Direct，请求发到 `https://www.dmxapi.cn/v1`。温度 0.4，`top_p` 1，`max_tokens` 512，`enable_thinking` 关闭。254 题都有返回，`finish_reason` 都是 `stop`。每一行的 `response` 是模型原文。
+2026-10-23 用 `qwen3.5-27b` 跑的 AQUA Direct 和 AQUA CoT，请求发到 `https://www.dmxapi.cn/v1`。温度 0.4，`top_p` 1，`enable_thinking` 关闭。Direct 的 `max_tokens` 是 512。CoT 是一次补全，最多 2048 token，字母只取回复里的答案句。每一行的 `response` 是模型原文。
+
+Direct 的 254 题都在 512 token 内结束。CoT 有 28 题在 2048 token 处被截断（`finish_reason` 为 `length`），其中 15 题没有可计的答案句。另有 14 题正常结束，但收尾写成了 `Answer Choice: X` 这一类，同一套答案句规则不把它们计成字母。这 29 题的 `pred` 为空，仍留在分母里，原文在 `response`。
 
 | 文件 | 数据 | 结果 |
 | --- | --- | --- |
 | `qwen3.5-27b/direct/aqua.jsonl` | AQUA-RAT test，254 | 141/254 |
+| `qwen3.5-27b/cot/aqua.jsonl` | AQUA-RAT test，254。一次 CoT，最多 2048 token | 210/254 |

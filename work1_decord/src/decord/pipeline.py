@@ -125,7 +125,7 @@ def run_cot(
 
     settings = config or GenerateConfig()
     prompt = cot_prompt(question, options)
-    text, error = _complete(client, prompt, _with_max_tokens(settings, COT_MAX_TOKENS))
+    text, error, finish_reason = _complete_meta(client, prompt, _with_max_tokens(settings, COT_MAX_TOKENS))
     letter = cot_answer_letter(text) if text else ""
     gold_letter = (gold or "").strip().upper()[:1]
     return {
@@ -135,6 +135,7 @@ def run_cot(
         "correct": bool(letter) and letter == gold_letter,
         "reasoning_correct": None,
         "error": error,
+        "finish_reason": finish_reason,
         "n_calls": 1,
         "raw": {"cot": text},
     }
