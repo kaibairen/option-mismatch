@@ -136,3 +136,39 @@ def test_repeated_question_text_is_saved_twice(tmp_path: Path):
     ]
     again = run_letter_log(output=path, items=[first, second], client=ScriptedClient([]), config=GenerateConfig())
     assert again == {"written": 0, "skipped": 2, "errors": 0}
+
+
+def test_decord_row_keeps_both_calls_and_the_reasoning_score(tmp_path: Path):
+    path = tmp_path / "decord.jsonl"
+    item = Item(
+        id="aqua_rat-test-0007",
+        dataset="aqua_rat",
+        subset=None,
+        subject=None,
+        question="How long?",
+        options=["A) 10", "B) 11"],
+        answer="B",
+    )
+    decision = json.dumps({"matches": [{"letter": "B", "relation": "≈", "note": "11"}], "answer": "B"})
+    client = ScriptedClient(
+        [
+            json.dumps({"reasoning": "The trip takes 11 hours.", "conclusion": "11"}),
+            decision,
+        ]
+    )
+    counts = run_letter_log(
+        output=path,
+        items=[item],
+        method="decord_standard",
+        client=client,
+        config=GenerateConfig(),
+    )
+    assert counts == {"written": 1, "skipped": 0, "errors": 0}
+    row = load_saved_rows(path)[0]
+    assert row["pred"] == "B"
+    assert row["response"] == decision
+    assert row["conclusion"] == "11"
+    assert row["relation"] == "≈"
+    assert row["reasoning_correct"] is True
+    assert [step["step"] for step in row["trace"]] == ["reasoning", "decision"]
+    assert "11 hours" in row["trace"][0]["response"]

@@ -120,7 +120,11 @@ def test_standard_path_calls_reason_then_decide_once():
     assert len(client.prompts) == 2
     assert "11 hours" not in client.prompts[0]
     assert "B) 11 hours" in client.prompts[1]
-    assert client.kwargs[0] == {"temperature": 0.4, "top_p": 1.0, "max_tokens": 512}
+    assert "≈" in client.prompts[1]
+    assert client.kwargs[0]["max_tokens"] == 2048
+    assert client.kwargs[1]["max_tokens"] == 512
+    assert result["relation"] == "≈"
+    assert [step["step"] for step in result["trace"]] == ["reasoning", "decision"]
 
 
 def test_low_confidence_triggers_one_reflection():
@@ -167,6 +171,8 @@ def test_high_confidence_skips_reflection():
     assert result["pred"] == "B"
     assert result["confidence"] == pytest.approx(1.0)
     assert len(client.prompts) == 3
+    assert client.kwargs[0]["max_tokens"] == 2048
+    assert client.kwargs[1]["max_tokens"] == 512
 
 
 def test_finished_cot_is_one_call_and_reads_the_answer_sentence():

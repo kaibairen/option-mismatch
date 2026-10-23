@@ -98,6 +98,8 @@ def _public_row(model: str, item: Item, result: dict[str, Any]) -> dict[str, Any
         "pred": result["pred"],
         "correct": result["correct"],
         "reasoning_correct": result.get("reasoning_correct"),
+        "conclusion": result.get("conclusion") or "",
+        "relation": result.get("relation") or "",
         "confidence": result.get("confidence"),
         "reflected": result.get("reflected"),
         "error": result.get("error") or "",

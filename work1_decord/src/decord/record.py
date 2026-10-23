@@ -42,6 +42,21 @@ def prediction_row(
     return row
 
 
+def _paper_fields(result: dict[str, Any]) -> dict[str, Any]:
+    """Fields DecoRD needs after the run: conclusion, match relation, reasoning score."""
+
+    fields: dict[str, Any] = {}
+    conclusion = result.get("conclusion")
+    if isinstance(conclusion, str) and conclusion:
+        fields["conclusion"] = conclusion
+    relation = result.get("relation")
+    if isinstance(relation, str) and relation:
+        fields["relation"] = relation
+    if result.get("reasoning_correct") is not None:
+        fields["reasoning_correct"] = bool(result["reasoning_correct"])
+    return fields
+
+
 def _response_text(result: dict[str, Any]) -> str | None:
     raw = result.get("raw") or {}
     if not isinstance(raw, dict):
@@ -95,19 +110,21 @@ def append_prediction(
     response: str | None = None,
     finish_reason: str | None = None,
     trace: list[dict[str, str]] | None = None,
+    extra: dict[str, Any] | None = None,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    line = json.dumps(
-        prediction_row(
-            question,
-            answer,
-            pred,
-            response=response,
-            finish_reason=finish_reason,
-            trace=trace,
-        ),
-        ensure_ascii=False,
-    ) + "\n"
+    row = prediction_row(
+        question,
+        answer,
+        pred,
+        response=response,
+        finish_reason=finish_reason,
+        trace=trace,
+    )
+    for key, value in (extra or {}).items():
+        if key not in row:
+            row[key] = value
+    line = json.dumps(row, ensure_ascii=False) + "\n"
     with path.open("ab") as handle:
         handle.write(line.encode("utf-8"))
         handle.flush()
@@ -173,6 +190,7 @@ def run_letter_log(
             response=_response_text(result),
             finish_reason=str(result.get("finish_reason") or ""),
             trace=trace if isinstance(trace, list) else None,
+            extra=_paper_fields(result),
         )
         written += 1
         print(f"{index}/{total} saved", file=sys.stderr)
