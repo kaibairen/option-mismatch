@@ -62,10 +62,17 @@ def decision_prompt(question: str, reasoning: str, conclusion: str, options: lis
         "answer": "A",
     }
     instructions = (
-        "Match the reasoning conclusion to exactly one option. "
+        "Match the conclusion to exactly one option. "
         "Use ≈ for numerical approximation, ≡ for conceptual equivalence, "
         "and → for a range or semantic containment. "
-        "Put the chosen letter in answer."
+        "An equivalent form still matches: a factorial, a radical, an algebraic identity, or a unit conversion. "
+        "After converting units, choose the option with the smaller absolute difference. "
+        "Do not round to a farther listed value. "
+        "If no option equals the conclusion, recompute the quantity the question asks for from the question and the options. "
+        "Reject a conclusion that answers a different quantity. "
+        "Do not assign a number to a symbol such as p in order to force a numeric option. "
+        "If the conclusion is empty or the reasoning stops mid-calculation, solve from the question and the options. "
+        "The answer field must be exactly one letter from the options."
     )
     context = (
         f"Question:\n{question.strip()}\n\n"

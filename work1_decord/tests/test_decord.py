@@ -52,6 +52,9 @@ def test_reasoning_prompt_hides_options():
 def test_decision_prompt_keeps_relation_symbols():
     prompt = decision_prompt("How long?", "Total is 11 hours.", "11 hours", ["A) 10", "D) 12 hours"])
     assert "≈" in prompt and "≡" in prompt and "→" in prompt
+    assert "smaller absolute difference" in prompt
+    assert "recompute the quantity" in prompt
+    assert "exactly one letter" in prompt
     assert "11 hours" in prompt
     assert "D) 12 hours" in prompt
 
