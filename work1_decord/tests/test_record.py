@@ -65,9 +65,15 @@ def test_partial_tail_is_dropped_and_completed_questions_are_skipped(tmp_path: P
     rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
     assert rows == [
         {"question": "Question 0", "answer": "A", "pred": "D"},
-        {"question": "Question 1", "answer": "E", "pred": "B"},
+        {
+            "question": "Question 1",
+            "answer": "E",
+            "pred": "B",
+            "response": json.dumps({"answer": "B"}),
+        },
     ]
     assert set(rows[0]) == {"question", "answer", "pred"}
+    assert rows[1]["response"] == json.dumps({"answer": "B"})
 
 
 def test_failed_call_is_not_saved_so_a_rerun_can_retry(tmp_path: Path):
@@ -91,6 +97,9 @@ def test_failed_call_is_not_saved_so_a_rerun_can_retry(tmp_path: Path):
     row = json.loads(path.read_text(encoding="utf-8"))
     assert row["pred"] == "B"
     assert row["answer"] == "B"
+    assert row["response"] == json.dumps({"answer": "B"})
+    reloaded = load_saved_rows(path)
+    assert reloaded[0]["response"] == row["response"]
 
 
 def test_repeated_question_text_is_saved_twice(tmp_path: Path):
@@ -110,8 +119,8 @@ def test_repeated_question_text_is_saved_twice(tmp_path: Path):
     assert counts == {"written": 2, "skipped": 0, "errors": 0}
     rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
     assert rows == [
-        {"question": "Question 0", "answer": "A", "pred": "A"},
-        {"question": "Question 0", "answer": "D", "pred": "D"},
+        {"question": "Question 0", "answer": "A", "pred": "A", "response": json.dumps({"answer": "A"})},
+        {"question": "Question 0", "answer": "D", "pred": "D", "response": json.dumps({"answer": "D"})},
     ]
     again = run_letter_log(output=path, items=[first, second], client=ScriptedClient([]), config=GenerateConfig())
     assert again == {"written": 0, "skipped": 2, "errors": 0}

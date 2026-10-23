@@ -4,7 +4,7 @@
 
 ## work1_decord
 
-多步智能体 DecoRD。这一轮四个模型是 Qwen3.5-9B、Qwen3.5-27B、DeepSeek-V3、GPT-4，对照是 Direct、CoT、Plan-and-Solve、Reflexion。题目是 AQUA-RAT test 和 MMLU 每科 40 题。已提交的逐题记录在 `work1_decord/experiment_results/`，稿子里的旧表在 `work1_decord/reports/`。
+多步智能体 DecoRD。这一轮四个模型是 Qwen3.5-9B、Qwen3.5-27B、DeepSeek-V3、GPT-4，对照是 Direct、CoT、Plan-and-Solve、Reflexion。题目是 AQUA-RAT test 和 MMLU 每科 40 题。已提交的逐题记录在 `work1_decord/experiment_data/<模型>/<方法>/`，稿子里的旧表在 `work1_decord/reports/`。
 
 ```bash
 cd work1_decord

@@ -35,14 +35,14 @@ PYTHONPATH=src python -m decord score --runs runs
 
 `--dry-run` 不访问网络。正式运行把每题一行写到 `runs/<model>/<method>.jsonl`，已经写过的题会跳过。`runs/` 不进 git。
 
-AQUA 和 MMLU 的逐题记录用 `record`。每答完一题就追加一行 `{"question","answer","pred"}` 并 `fsync`。文件按题目顺序保存，已有前缀会跳过。请求失败时停在该题，不把后面的题写进去，下次从这题继续。文件末尾如果是写到一半的半行，恢复时会丢掉这一行再重跑该题。MMLU 有重复题干，所以不能只按题干去重。
+AQUA 和 MMLU 的逐题记录用 `record`。每答完一题就追加一行并 `fsync`。一行至少有 `question`、`answer`、`pred`；这次调用留下的模型原文写在 `response`，接口给出的结束原因写在 `finish_reason`。文件按题目顺序保存，已有前缀会跳过。请求失败时停在该题，不把后面的题写进去，下次从这题继续。文件末尾如果是写到一半的半行，恢复时会丢掉这一行再重跑该题。MMLU 有重复题干，所以不能只按题干去重。要进 git 的记录放在 `experiment_data/<模型>/<方法>/<数据集>.jsonl`。
 
 ```bash
 BASE_URL=http://127.0.0.1:16006/v1 API_KEY=local \
 PYTHONPATH=src python -m decord record --model qwen3.5-9b --method direct \
-  --dataset aqua_rat --output runs/qwen3.5-9b/aqua_direct.jsonl
+  --dataset aqua_rat --output experiment_data/qwen3.5-9b/direct/aqua.jsonl
 PYTHONPATH=src python -m decord record --model qwen3.5-9b --method direct \
-  --dataset mmlu --output runs/qwen3.5-9b/mmlu_direct.jsonl
+  --dataset mmlu --output experiment_data/qwen3.5-9b/direct/mmlu.jsonl
 ```
 
 ## 已有结果

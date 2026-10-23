@@ -150,7 +150,7 @@ def run_direct(
 ) -> dict[str, Any]:
     settings = config or GenerateConfig()
     prompt = direct_prompt(question, options)
-    text, error = _complete(client, prompt, settings)
+    text, error, finish_reason = _complete_meta(client, prompt, settings)
     letter = extract_letter(text) if text else ""
     gold_letter = (gold or "").strip().upper()[:1]
     return {
@@ -160,6 +160,7 @@ def run_direct(
         "correct": bool(letter) and letter == gold_letter,
         "reasoning_correct": None,
         "error": error,
+        "finish_reason": finish_reason,
         "n_calls": 1,
         "raw": {"direct": text},
     }
