@@ -34,7 +34,7 @@ def calls_per_item(sample_k: int, *, reflect_every_item: bool) -> dict[str, int]
         "direct": 1,
         "cot": 1,
         "plan_and_solve": 1,
-        "reflexion": 2,
+        "self_refine": 9,
         "decord_standard": 2,
         "decord_confidence_reflection": confidence,
     }
@@ -98,6 +98,8 @@ def _public_row(model: str, item: Item, result: dict[str, Any]) -> dict[str, Any
         "pred": result["pred"],
         "correct": result["correct"],
         "reasoning_correct": result.get("reasoning_correct"),
+        "conclusion": result.get("conclusion") or "",
+        "relation": result.get("relation") or "",
         "confidence": result.get("confidence"),
         "reflected": result.get("reflected"),
         "error": result.get("error") or "",

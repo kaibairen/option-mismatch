@@ -62,10 +62,17 @@ def decision_prompt(question: str, reasoning: str, conclusion: str, options: lis
         "answer": "A",
     }
     instructions = (
-        "Match the reasoning conclusion to exactly one option. "
+        "Match the conclusion to exactly one option. "
         "Use ≈ for numerical approximation, ≡ for conceptual equivalence, "
         "and → for a range or semantic containment. "
-        "Put the chosen letter in answer."
+        "An equivalent form still matches: a factorial, a radical, an algebraic identity, or a unit conversion. "
+        "After converting units, choose the option with the smaller absolute difference. "
+        "Do not round to a farther listed value. "
+        "If no option equals the conclusion, recompute the quantity the question asks for from the question and the options. "
+        "Reject a conclusion that answers a different quantity. "
+        "Do not assign a number to a symbol such as p in order to force a numeric option. "
+        "If the conclusion is empty or the reasoning stops mid-calculation, solve from the question and the options. "
+        "The answer field must be exactly one letter from the options."
     )
     context = (
         f"Question:\n{question.strip()}\n\n"
@@ -137,28 +144,39 @@ def plan_solve_prompt(question: str, options: list[str]) -> str:
     )
 
 
-def reflexion_prompt(question: str, options: list[str], previous: str) -> str:
-    """One critique-and-revise call after a single coupled CoT attempt.
+def self_refine_feedback_prompt(question: str, options: list[str], solution: str) -> str:
+    """Feedback step from Madaan et al., NeurIPS 2023, Algorithm 1.
 
-    Shinn et al. (2023) retry until the attempt improves. This baseline stops
-    after this one revision: no extra sample and no vote.
+    The math-task wording asks for a specific error. The stop sentence is the
+    one the released GSM runner treats as “no further refinement”.
     """
 
-    schema = {"critique": "", "answer": "A"}
-    context = (
-        f"Question:\n{question.strip()}\n\n"
-        f"Options:\n{_options_block(options)}\n\n"
-        f"Previous attempt:\n{previous.strip()}"
+    return (
+        f"Q: {question.strip()} {_answer_choices(options)}\n"
+        f"Solution:\n{solution.strip()}\n\n"
+        "There may be an error in the solution above because of a lack of understanding of the question. "
+        "What is the error? To find the error, go through the solution step by step and check if everything looks good.\n"
+        "If the solution is already correct, write exactly: It is correct.\n"
+        "If it is not correct, name the specific wrong step and state how to correct it."
     )
-    return _wrap(
-        "answer reflection",
-        (
-            "Critique the previous attempt, correct a wrong option choice, "
-            "and put the revised option letter in answer."
-        ),
-        schema,
-        context,
+
+
+def self_refine_refine_prompt(
+    question: str,
+    options: list[str],
+    history: list[tuple[str, str]],
+) -> str:
+    """Refine step. Equation 4 keeps every earlier solution and its feedback."""
+
+    blocks = [f"Q: {question.strip()} {_answer_choices(options)}"]
+    for solution, feedback in history:
+        blocks.append(f"Solution:\n{solution.strip()}\n\nFeedback:\n{feedback.strip()}")
+    blocks.append(
+        "Okay! Here is the rewrite:\n"
+        "Write a corrected step-by-step solution to the question above. "
+        "End with the line: The answer is X"
     )
+    return "\n\n".join(blocks)
 
 
 def cot_prompt(question: str, options: list[str]) -> str:

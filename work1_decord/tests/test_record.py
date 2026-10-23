@@ -37,6 +37,18 @@ def test_row_uses_question_answer_and_pred():
     }
 
 
+def test_trace_keeps_every_call(tmp_path: Path):
+    path = tmp_path / "self_refine.jsonl"
+    trace = [
+        {"step": "init", "response": "The answer is A.", "finish_reason": "stop"},
+        {"step": "feedback_0", "response": "It is correct.", "finish_reason": "stop"},
+    ]
+    append_prediction(path, "How long?", "A", "A", response="The answer is A.", finish_reason="stop", trace=trace)
+    reloaded = load_saved_rows(path)
+    assert reloaded[0]["response"] == "The answer is A."
+    assert reloaded[0]["trace"] == trace
+
+
 def test_partial_tail_is_dropped_and_completed_questions_are_skipped(tmp_path: Path):
     path = tmp_path / "aqua_direct.jsonl"
     append_prediction(path, "Question 0", "A", "D")
@@ -65,9 +77,15 @@ def test_partial_tail_is_dropped_and_completed_questions_are_skipped(tmp_path: P
     rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
     assert rows == [
         {"question": "Question 0", "answer": "A", "pred": "D"},
-        {"question": "Question 1", "answer": "E", "pred": "B"},
+        {
+            "question": "Question 1",
+            "answer": "E",
+            "pred": "B",
+            "response": json.dumps({"answer": "B"}),
+        },
     ]
     assert set(rows[0]) == {"question", "answer", "pred"}
+    assert rows[1]["response"] == json.dumps({"answer": "B"})
 
 
 def test_failed_call_is_not_saved_so_a_rerun_can_retry(tmp_path: Path):
@@ -91,6 +109,9 @@ def test_failed_call_is_not_saved_so_a_rerun_can_retry(tmp_path: Path):
     row = json.loads(path.read_text(encoding="utf-8"))
     assert row["pred"] == "B"
     assert row["answer"] == "B"
+    assert row["response"] == json.dumps({"answer": "B"})
+    reloaded = load_saved_rows(path)
+    assert reloaded[0]["response"] == row["response"]
 
 
 def test_repeated_question_text_is_saved_twice(tmp_path: Path):
@@ -110,8 +131,44 @@ def test_repeated_question_text_is_saved_twice(tmp_path: Path):
     assert counts == {"written": 2, "skipped": 0, "errors": 0}
     rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
     assert rows == [
-        {"question": "Question 0", "answer": "A", "pred": "A"},
-        {"question": "Question 0", "answer": "D", "pred": "D"},
+        {"question": "Question 0", "answer": "A", "pred": "A", "response": json.dumps({"answer": "A"})},
+        {"question": "Question 0", "answer": "D", "pred": "D", "response": json.dumps({"answer": "D"})},
     ]
     again = run_letter_log(output=path, items=[first, second], client=ScriptedClient([]), config=GenerateConfig())
     assert again == {"written": 0, "skipped": 2, "errors": 0}
+
+
+def test_decord_row_keeps_both_calls_and_the_reasoning_score(tmp_path: Path):
+    path = tmp_path / "decord.jsonl"
+    item = Item(
+        id="aqua_rat-test-0007",
+        dataset="aqua_rat",
+        subset=None,
+        subject=None,
+        question="How long?",
+        options=["A) 10", "B) 11"],
+        answer="B",
+    )
+    decision = json.dumps({"matches": [{"letter": "B", "relation": "≈", "note": "11"}], "answer": "B"})
+    client = ScriptedClient(
+        [
+            json.dumps({"reasoning": "The trip takes 11 hours.", "conclusion": "11"}),
+            decision,
+        ]
+    )
+    counts = run_letter_log(
+        output=path,
+        items=[item],
+        method="decord_standard",
+        client=client,
+        config=GenerateConfig(),
+    )
+    assert counts == {"written": 1, "skipped": 0, "errors": 0}
+    row = load_saved_rows(path)[0]
+    assert row["pred"] == "B"
+    assert row["response"] == decision
+    assert row["conclusion"] == "11"
+    assert row["relation"] == "≈"
+    assert row["reasoning_correct"] is True
+    assert [step["step"] for step in row["trace"]] == ["reasoning", "decision"]
+    assert "11 hours" in row["trace"][0]["response"]

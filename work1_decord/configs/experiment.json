@@ -21,7 +21,7 @@
     "direct",
     "cot",
     "plan_and_solve",
-    "reflexion",
+    "self_refine",
     "decord_standard"
   ],
   "temperature": 0.4,
@@ -33,11 +33,11 @@
   "notes": {
     "models": "qwen3.5-9b and qwen3.5-27b are the open Qwen3.5 checkpoints. deepseek-v3 and gpt-4 are the closed models. The id is the model string sent to the OpenAI-compatible endpoint. Order published tables by measured CoT accuracy.",
     "thinking": "Both Qwen3.5 requests set enable_thinking to false, matching the 9B server that produced the saved logs. deepseek-v3 and gpt-4 have no thinking switch in this grid.",
-    "cot_max_tokens": "max_tokens 512 is the grid default. The CoT completion uses 2048 so the answer line is not cut off. Direct stays at 512.",
+    "cot_max_tokens": "max_tokens 512 is the grid default. The CoT completion uses 2048 so the answer line is not cut off. Direct stays at 512. Self-Refine uses 2048 for the initial draft, the feedback, and every rewrite. DecoRD reasoning uses 2048 so the conclusion is not cut off. The option match and confidence reflection stay at 512.",
     "prompting": "Zero-shot. No MMLU 5-shot dev items and no AQUA rationales.",
     "plan_and_solve": "Wang et al. ACL 2023 replace the CoT trigger with one plan-and-solve sentence. The plan and the solution are the same completion. The letter uses the same answer-line rules as CoT, with no second call.",
-    "reflexion": "One coupled CoT call plus one critique. No sampling, no vote, no further retry.",
-    "decord": "This grid runs decord_standard only: one stem-only reasoning call and one option match. Confidence reflection is implemented and is not in methods.",
+    "self_refine": "Madaan et al. NeurIPS 2023 Algorithm 1. The initial draft is the zero-shot CoT prompt. Feedback and refine are separate calls. The refine call keeps every earlier draft and its feedback. Stop when the feedback contains 'It is correct', otherwise after 4 iterations. The dry-run count 9 is that maximum: 1 draft plus 4 feedback calls plus 4 rewrites. The gold letter is not shown to the model. The paper's math prompts are few-shot Python and its appendix also uses the label as an oracle stop; this grid stays zero-shot and scores the option letter.",
+    "decord": "This round uses only the DecoRD framework, decord_standard: one stem-only reasoning call, then one option match using ≈, ≡, or →. The saved row keeps both calls, the conclusion, reasoning_correct, and the relation, so DCDI can be recomputed. Confidence reflection stays implemented and is not run.",
     "scoring": "accuracy_full keeps failures in the denominator. MMLU category and overall scores are unweighted means of subject accuracies.",
     "endpoint": "Set BASE_URL to the OpenAI-compatible root, including /v1, and API_KEY in the environment. The runner does not read a key from this file."
   }
