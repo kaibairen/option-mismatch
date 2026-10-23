@@ -12,13 +12,14 @@
 
 ## 这一轮要跑的格子
 
-`configs/experiment.json` 锁定三个模型、五个零样本系统，题目是 `dataset/manifest.json` 里的 `experiment_files`：AQUA-RAT 全部 254 题，加上 MMLU 每科 40 题（seed 42，共 2280 题）。
+`configs/experiment.json` 锁定四个模型、五个零样本系统，题目是 `dataset/manifest.json` 里的 `experiment_files`：AQUA-RAT 全部 254 题，加上 MMLU 每科 40 题（seed 42，共 2280 题）。LogiQA 和高考仍留在 `dataset/`，不进这一轮。
 
-| 模型 | 角色 |
-| --- | --- |
-| `qwen3-8b` | 开源 8B。请求带 `enable_thinking: false` |
-| `gpt-4o-mini` | 当前闭源轻量模型 |
-| `deepseek-v4-pro-guan` | 当前较强的官方模型。请求带 `thinking.type = disabled` |
+| 模型 | 请求里的模型名 | 思考开关 |
+| --- | --- | --- |
+| Qwen3.5-9B | `qwen3.5-9b` | `enable_thinking: false` |
+| Qwen3.5-27B | `qwen3.5-27b` | `enable_thinking: false` |
+| DeepSeek-V3 | `deepseek-v3` | 不带 |
+| GPT-4 | `gpt-4` | 不带 |
 
 五个系统都看同一批题。Direct、CoT、Plan-and-Solve、Reflexion 每次调用都看题干和选项。DecoRD 是题干推理一次，再匹配选项一次。Plan-and-Solve 用 Wang 等人的一句触发语，计划和求解写在同一次回复里，字母规则与 CoT 相同。Reflexion 是一次 CoT 再加一次修改，不再重试。置信度反思的函数还在包里，这一轮的 `methods` 不包含它。
 
@@ -28,7 +29,7 @@ MMLU 的大类分数和 57 科总分都是学科准确率的不加权平均。AQ
 cd work1_decord
 PYTHONPATH=src python -m decord run --dry-run
 # 真正调用前设置 BASE_URL（OpenAI 兼容根路径，含 /v1）和 API_KEY
-PYTHONPATH=src python -m decord run --model qwen3-8b --method direct --limit 2
+PYTHONPATH=src python -m decord run --model qwen3.5-9b --method direct --limit 2
 PYTHONPATH=src python -m decord score --runs runs
 ```
 

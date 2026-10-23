@@ -4,6 +4,8 @@
 
 每一行是 `{"question","answer","pred"}`。`answer` 是标准答案，`pred` 是模型给出的字母。文件按题目顺序保存，中断后用同一条命令可以接着写。
 
+当前格子的四个模型是 `qwen3.5-9b`、`qwen3.5-27b`、`deepseek-v3`、`gpt-4`。下面只有 9B 的三份记录。27B、DeepSeek-V3、GPT-4，以及 Plan-and-Solve、Reflexion、DecoRD，都还没有逐题文件。
+
 ## qwen3.5-9b
 
 2026-10-20 重新跑的 Direct 和 AQUA CoT。温度 0.4，`top_p` 1，`enable_thinking` 关闭。Direct 的 `max_tokens` 是 512。CoT 是一次补全，最多 2048 token，字母只取回复里的答案句。10 月 17 日那次的逐题文件没有进 git，已经不在磁盘上，这里不是那次的原件。

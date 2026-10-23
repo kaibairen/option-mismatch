@@ -23,17 +23,19 @@ class ScriptedClient:
         return self.replies.pop(0)
 
 
-def test_config_locks_the_three_models_and_disables_thinking():
+def test_config_locks_the_four_models_and_disables_qwen_thinking():
     config = load_config()
     assert [model["id"] for model in config["models"]] == [
-        "qwen3-8b",
-        "gpt-4o-mini",
-        "deepseek-v4-pro-guan",
+        "qwen3.5-9b",
+        "qwen3.5-27b",
+        "deepseek-v3",
+        "gpt-4",
     ]
     bodies = {model["id"]: model["extra_body"] for model in config["models"]}
-    assert bodies["qwen3-8b"] == {"enable_thinking": False}
-    assert bodies["gpt-4o-mini"] == {}
-    assert bodies["deepseek-v4-pro-guan"] == {"thinking": {"type": "disabled"}}
+    assert bodies["qwen3.5-9b"] == {"enable_thinking": False}
+    assert bodies["qwen3.5-27b"] == {"enable_thinking": False}
+    assert bodies["deepseek-v3"] == {}
+    assert bodies["gpt-4"] == {}
     assert config["methods"] == list(METHODS)
     assert config["temperature"] == 0.4
     assert config["top_p"] == 1.0
@@ -44,13 +46,9 @@ def test_config_locks_the_three_models_and_disables_thinking():
 
 
 def test_request_payload_carries_only_that_models_thinking_switch():
-    qwen = OpenAIChatClient("qwen3-8b", api_key="test", extra_body={"enable_thinking": False})
-    closed = OpenAIChatClient("gpt-4o-mini", api_key="test", extra_body={})
-    deepseek = OpenAIChatClient(
-        "deepseek-v4-pro-guan",
-        api_key="test",
-        extra_body={"thinking": {"type": "disabled"}},
-    )
+    qwen = OpenAIChatClient("qwen3.5-9b", api_key="test", extra_body={"enable_thinking": False})
+    closed = OpenAIChatClient("gpt-4", api_key="test", extra_body={})
+    deepseek = OpenAIChatClient("deepseek-v3", api_key="test", extra_body={})
     qwen_payload = qwen.request_payload("Q", temperature=0.4, top_p=1, max_tokens=512)
     closed_payload = closed.request_payload("Q", temperature=0.4, top_p=1, max_tokens=512)
     deepseek_payload = deepseek.request_payload("Q", temperature=0.4, top_p=1, max_tokens=512)
@@ -58,8 +56,8 @@ def test_request_payload_carries_only_that_models_thinking_switch():
     assert "thinking" not in qwen_payload
     assert "enable_thinking" not in closed_payload
     assert "thinking" not in closed_payload
-    assert deepseek_payload["thinking"] == {"type": "disabled"}
     assert "enable_thinking" not in deepseek_payload
+    assert "thinking" not in deepseek_payload
 
 
 def test_locked_question_list_is_aqua_254_and_mmlu_40_per_subject():
@@ -141,7 +139,7 @@ def test_run_appends_and_skips_completed_ids(tmp_path: Path):
         answer="A",
     )
     config = {
-        "models": [{"id": "gpt-4o-mini", "extra_body": {}}],
+        "models": [{"id": "gpt-4", "extra_body": {}}],
         "methods": ["direct"],
         "temperature": 0.4,
         "top_p": 1.0,
@@ -153,7 +151,7 @@ def test_run_appends_and_skips_completed_ids(tmp_path: Path):
     client = ScriptedClient([json.dumps({"answer": "A"})])
 
     def factory(model: str, body: dict) -> ScriptedClient:
-        assert model == "gpt-4o-mini"
+        assert model == "gpt-4"
         assert body == {}
         return client
 
@@ -161,10 +159,10 @@ def test_run_appends_and_skips_completed_ids(tmp_path: Path):
     second = run_grid(config=config, items=[item], runs=tmp_path, client_factory=factory)
     assert first == {"written": 1, "skipped": 0}
     assert second == {"written": 0, "skipped": 1}
-    log = (tmp_path / "gpt-4o-mini" / "direct.jsonl").read_text(encoding="utf-8").strip()
+    log = (tmp_path / "gpt-4" / "direct.jsonl").read_text(encoding="utf-8").strip()
     row = json.loads(log)
     assert row["correct"] is True
     assert row["status"] == "ok"
     assert "Explanation" not in client.prompts[0]
     tables = score_runs(tmp_path, items=[item])
-    assert tables["gpt-4o-mini"]["direct"]["aqua"]["accuracy_full"] == 1.0
+    assert tables["gpt-4"]["direct"]["aqua"]["accuracy_full"] == 1.0

@@ -1,6 +1,6 @@
 """Run and score the locked Work 1 grid.
 
-Three models, five zero-shot systems, AQUA-RAT test plus MMLU subject-40.
+Four models, five zero-shot systems, AQUA-RAT test plus MMLU subject-40.
 DecoRD is one reasoning call and one decision call. Confidence reflection
 stays implemented and is not part of this grid. A real run appends JSONL
 under ``work1_decord/runs/`` and skips item ids already present.

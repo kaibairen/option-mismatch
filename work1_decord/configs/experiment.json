@@ -1,16 +1,20 @@
 {
   "models": [
     {
-      "id": "qwen3-8b",
+      "id": "qwen3.5-9b",
       "extra_body": {"enable_thinking": false}
     },
     {
-      "id": "gpt-4o-mini",
+      "id": "qwen3.5-27b",
+      "extra_body": {"enable_thinking": false}
+    },
+    {
+      "id": "deepseek-v3",
       "extra_body": {}
     },
     {
-      "id": "deepseek-v4-pro-guan",
-      "extra_body": {"thinking": {"type": "disabled"}}
+      "id": "gpt-4",
+      "extra_body": {}
     }
   ],
   "methods": [
@@ -27,8 +31,9 @@
   "confidence_threshold": 0.5,
   "request_timeout_s": 180,
   "notes": {
-    "models": "qwen3-8b is the open 8B. gpt-4o-mini is the current closed lightweight model. deepseek-v4-pro-guan is the current stronger official model. All three answer directly. Order published tables by measured CoT accuracy.",
-    "thinking": "DeepSeek V4 thinks unless the request sets thinking.type to disabled. qwen3-8b receives enable_thinking false. gpt-4o-mini has no thinking switch.",
+    "models": "qwen3.5-9b and qwen3.5-27b are the open Qwen3.5 checkpoints. deepseek-v3 and gpt-4 are the closed models. The id is the model string sent to the OpenAI-compatible endpoint. Order published tables by measured CoT accuracy.",
+    "thinking": "Both Qwen3.5 requests set enable_thinking to false, matching the 9B server that produced the saved logs. deepseek-v3 and gpt-4 have no thinking switch in this grid.",
+    "cot_max_tokens": "max_tokens 512 is the grid default. The CoT completion uses 2048 so the answer line is not cut off. Direct stays at 512.",
     "prompting": "Zero-shot. No MMLU 5-shot dev items and no AQUA rationales.",
     "plan_and_solve": "Wang et al. ACL 2023 replace the CoT trigger with one plan-and-solve sentence. The plan and the solution are the same completion. The letter uses the same answer-line rules as CoT, with no second call.",
     "reflexion": "One coupled CoT call plus one critique. No sampling, no vote, no further retry.",
