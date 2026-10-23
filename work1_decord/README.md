@@ -1,14 +1,15 @@
 # DecoRD
 
-工作 1 的代码按 AAAI 稿 *We Get the Answer, but Where is the Answer?* 重写。一次调用的路径是：
+工作 1 的代码按 AAAI 稿 *We Get the Answer, but Where is the Answer?* 重写。这一轮只用 DecoRD 框架，两步：
 
 1. 推理智能体只看题干，输出 `reasoning` 和 `conclusion`。
 2. 决策智能体用 `≈`、`≡`、`→` 把结论配到选项，输出一个字母。
-3. 置信度反思在决策步采样。置信度是 `1 - H(p) / log(M)`。低于 0.5 时再反思一次。
+
+稿子里的置信度反思还留在代码里，这一轮不跑。
 
 耦合的 CoT 基线仍把题干和选项放在同一次调用里。
 
-生成设置来自稿子：温度 0.4，`top_p` 1，`max_tokens` 512。CoT 用 Kojima 等人的零样本触发句，题干和选项在同一条 `Q:` 里，模型从 `A: Let's think step by step.` 往后写。这一模型在 512 token 时还停在推导中途，所以 CoT 和 DecoRD 的题干推理放到 2048，让结论能写完。选项匹配和置信度反思仍是 512。字母只取这次回复里最后一处明确选择：`Answer: X`、`answer is X`、`the correct option is X`，或 `matches option X`。推理里顺手提到的选项字母不算，截断后也不再补一次调用。采样次数稿子只写成 Sample N，包内默认 5。单次请求超时 180 秒，这是这次重写的工程选择，用来替换旧 `evaluate.py` 里的 20 秒超时。失败会记成 `error`，不再当成空答案从分母里拿掉。
+生成设置来自稿子：温度 0.4，`top_p` 1，`max_tokens` 512。CoT 用 Kojima 等人的零样本触发句，题干和选项在同一条 `Q:` 里，模型从 `A: Let's think step by step.` 往后写。这一模型在 512 token 时还停在推导中途，所以 CoT 和 DecoRD 的题干推理放到 2048，让结论能写完。选项匹配仍是 512。字母只取这次回复里最后一处明确选择：`Answer: X`、`answer is X`、`the correct option is X`，或 `matches option X`。推理里顺手提到的选项字母不算，截断后也不再补一次调用。采样次数稿子只写成 Sample N，包内默认 5。单次请求超时 180 秒，这是这次重写的工程选择，用来替换旧 `evaluate.py` 里的 20 秒超时。失败会记成 `error`，不再当成空答案从分母里拿掉。
 
 ## 这一轮要跑的格子
 
@@ -21,7 +22,7 @@
 | DeepSeek-V3 | `deepseek-v3` | 不带 |
 | GPT-4 | `gpt-4` | 不带 |
 
-五个系统都看同一批题。Direct、CoT、Plan-and-Solve、Self-Refine 每次调用都看题干和选项。DecoRD(Standard) 是题干推理一次，再用 `≈`、`≡`、`→` 匹配选项一次。逐题记录除了决策字母，还留下 `trace`、`conclusion`、`reasoning_correct` 和 `relation`，事后可以重算 DCDI。Plan-and-Solve 用 Wang 等人的一句触发语，计划和求解写在同一次回复里，字母规则与 CoT 相同。Self-Refine 用 Madaan 等人 NeurIPS 2023 的算法：初稿和 CoT 用同一句提示，然后同一个模型写反馈；反馈里出现 `It is correct` 就停，否则带着以往的解答和反馈重写。最多 4 轮。标准答案只用来计分。论文的数学实验是带示例的 Python 程序，附录里还用标签决定是否继续；这一轮保持零样本，答案是选项字母。置信度反思的函数还在包里，这一轮的 `methods` 不包含它。
+五个系统都看同一批题。Direct、CoT、Plan-and-Solve、Self-Refine 每次调用都看题干和选项。DecoRD(Standard) 是题干推理一次，再用 `≈`、`≡`、`→` 匹配选项一次。逐题记录除了决策字母，还留下 `trace`、`conclusion`、`reasoning_correct` 和 `relation`，事后可以重算 DCDI。Plan-and-Solve 用 Wang 等人的一句触发语，计划和求解写在同一次回复里，字母规则与 CoT 相同。Self-Refine 用 Madaan 等人 NeurIPS 2023 的算法：初稿和 CoT 用同一句提示，然后同一个模型写反馈；反馈里出现 `It is correct` 就停，否则带着以往的解答和反馈重写。最多 4 轮。标准答案只用来计分。论文的数学实验是带示例的 Python 程序，附录里还用标签决定是否继续；这一轮保持零样本，答案是选项字母。置信度反思的函数还在包里，这一轮不使用。
 
 MMLU 的大类分数和 57 科总分都是学科准确率的不加权平均。AQUA 单独计分，并在 DecoRD 上计算 DCDI。两套数据不合成一个分数。
 
