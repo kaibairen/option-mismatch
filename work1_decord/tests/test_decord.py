@@ -272,6 +272,7 @@ def test_plan_and_solve_is_one_completion_and_reads_the_answer_line():
     assert result["n_calls"] == 1
     assert result["pred"] == "A"
     assert result["status"] == "ok"
+    assert result["finish_reason"] == ""
     assert client.kwargs[0]["max_tokens"] == 2048
     prompt = client.prompts[0]
     assert prompt.startswith("Q: How long? Answer Choices: (A) 10 hours (B) 11 hours")
