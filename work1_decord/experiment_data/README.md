@@ -26,3 +26,6 @@ Direct 的 254 题都在 512 token 内结束。CoT 有 28 题在 2048 token 处�
 | --- | --- | --- |
 | `qwen3.5-27b/direct/aqua.jsonl` | AQUA-RAT test，254 | 141/254 |
 | `qwen3.5-27b/cot/aqua.jsonl` | AQUA-RAT test，254。一次 CoT，最多 2048 token | 210/254 |
+| `qwen3.5-27b/self_refine/aqua.jsonl` | AQUA-RAT test 前 3 题。Self-Refine，初稿和反馈都是 2048 token | 3/3 |
+
+Self-Refine 这份目前只有前 3 题，按题目顺序写着，后面用同一条命令可以继续。这 3 题都是初稿加一次反馈：反馈原文是 `It is correct.`，随后停下，没有重写。每次调用的原文在 `trace` 里。
