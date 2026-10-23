@@ -18,7 +18,7 @@
 
 ## qwen3.5-27b
 
-2026-10-23 用 `qwen3.5-27b` 跑的 AQUA Direct 和 AQUA CoT，请求发到 `https://www.dmxapi.cn/v1`。温度 0.4，`top_p` 1，`enable_thinking` 关闭。Direct 的 `max_tokens` 是 512。CoT 是一次补全，最多 2048 token，字母只取回复里的答案句。每一行的 `response` 是模型原文。
+2026-10-23 用 `qwen3.5-27b` 跑的 AQUA Direct、AQUA CoT 和 AQUA Self-Refine，请求发到 `https://www.dmxapi.cn/v1`。温度 0.4，`top_p` 1，`enable_thinking` 关闭。Direct 的 `max_tokens` 是 512。CoT 是一次补全，最多 2048 token，字母只取回复里的答案句。Self-Refine 的初稿、反馈和重写也是 2048 token。每一行的 `response` 是用来计分的模型原文；Self-Refine 另有 `trace`，按调用顺序留下每一次回复。
 
 Direct 的 254 题都在 512 token 内结束。CoT 有 28 题在 2048 token 处被截断（`finish_reason` 为 `length`），其中 15 题没有可计的答案句。另有 14 题正常结束，但收尾写成了 `Answer Choice: X` 这一类，同一套答案句规则不把它们计成字母。这 29 题的 `pred` 为空，仍留在分母里，原文在 `response`。
 
@@ -26,6 +26,6 @@ Direct 的 254 题都在 512 token 内结束。CoT 有 28 题在 2048 token 处�
 | --- | --- | --- |
 | `qwen3.5-27b/direct/aqua.jsonl` | AQUA-RAT test，254 | 141/254 |
 | `qwen3.5-27b/cot/aqua.jsonl` | AQUA-RAT test，254。一次 CoT，最多 2048 token | 210/254 |
-| `qwen3.5-27b/self_refine/aqua.jsonl` | AQUA-RAT test 前 3 题。Self-Refine，初稿和反馈都是 2048 token | 3/3 |
+| `qwen3.5-27b/self_refine/aqua.jsonl` | AQUA-RAT test，254。Self-Refine，最多 4 轮 | 217/254 |
 
-Self-Refine 这份目前只有前 3 题，按题目顺序写着，后面用同一条命令可以继续。这 3 题都是初稿加一次反馈：反馈原文是 `It is correct.`，随后停下，没有重写。每次调用的原文在 `trace` 里。
+Self-Refine 从 14:35 跑到 16:15（Asia/Shanghai）。254 题都有返回，没有请求失败，一共 590 次调用。232 题在第一次反馈后停下。22 题至少重写了一次，其中 7 题改对、1 题改错，另外 14 题对错没有变。18 题没有抽出字母，仍留在分母里；多数是初稿以 `Answer Choice: X` 收尾，反馈认定它正确，所以没有重写成答案句。
