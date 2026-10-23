@@ -1,16 +1,26 @@
-"""Print archived results, or score a JSONL log produced by this package."""
+"""Print archived results, run the locked grid, or score a JSONL log."""
 
 from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 from decord.archive import available_reports, load_report
+from decord.experiment import main as experiment_main
 from decord.metrics import summarize_predictions
 
 
 def main() -> None:
+    if len(sys.argv) > 1 and sys.argv[1] in {"run", "score"}:
+        experiment_main(sys.argv[1:])
+        return
+    if len(sys.argv) > 1 and sys.argv[1] == "record":
+        from decord.record import main as record_main
+
+        record_main(sys.argv[1:])
+        return
     parser = argparse.ArgumentParser(description="DecoRD archived tables and log scoring")
     parser.add_argument("--report", default="", help="JSON file name under reports/")
     parser.add_argument("--log", default="", help="JSONL of per-item records from this package")

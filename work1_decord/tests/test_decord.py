@@ -4,8 +4,18 @@ from pathlib import Path
 import pytest
 
 from decord.metrics import dcdi, normalized_confidence, reasoning_matches, summarize_predictions
-from decord.pipeline import GenerateConfig, run_confidence_reflection, run_cot, run_standard
-from decord.prompts import decision_prompt, reasoning_prompt
+from decord.pipeline import (
+    METHODS,
+    RUNNERS,
+    GenerateConfig,
+    run_confidence_reflection,
+    run_cot,
+    run_direct,
+    run_plan_and_solve,
+    run_reflexion,
+    run_standard,
+)
+from decord.prompts import decision_prompt, direct_prompt, plan_solve_prompt, reasoning_prompt, reflexion_prompt
 
 
 class ScriptedClient:
@@ -152,6 +162,65 @@ def test_high_confidence_skips_reflection():
     assert len(client.prompts) == 3
 
 
+def test_finished_cot_is_one_call_and_reads_the_answer_sentence():
+    client = ScriptedClient(["36 is the multiple. The answer is (C)."])
+    result = run_cot(client, question="Which multiple?", options=["A) 15", "C) 36"], gold="C")
+    assert result["status"] == "ok"
+    assert result["pred"] == "C"
+    assert result["n_calls"] == 1
+    assert client.kwargs[0]["max_tokens"] == 2048
+    assert client.prompts[0].startswith("Q: Which multiple? Answer Choices: (A) 15 (C) 36")
+    assert client.prompts[0].rstrip().endswith("A: Let's think step by step.")
+    assert "reasoning" not in client.prompts[0]
+    assert "Partial reply" not in client.prompts[0]
+
+
+def test_truncated_cot_does_not_scrape_a_letter_or_ask_again():
+    client = ScriptedClient(['distance $d = x_1 - x_2$ and option A looks long'])
+    result = run_cot(
+        client,
+        question="How long?",
+        options=["A) 5(√3 + 1)", "D) 8(√3 – 2)"],
+        gold="A",
+    )
+    assert result["pred"] == ""
+    assert result["status"] == "no_letter"
+    assert result["n_calls"] == 1
+    assert result["correct"] is False
+    assert len(client.prompts) == 1
+
+
+def test_cot_without_an_answer_sentence_stays_blank():
+    client = ScriptedClient(["the distance is $d = 5$"])
+    result = run_cot(client, question="Q", options=["A) 1", "B) 2"], gold="A")
+    assert result["pred"] == ""
+    assert result["status"] == "no_letter"
+    assert result["n_calls"] == 1
+    assert result["correct"] is False
+
+
+def test_cot_keeps_the_last_answer_sentence():
+    client = ScriptedClient(["The answer is A. Recalculating gives 11. The answer is B."])
+    result = run_cot(client, question="Q", options=["A) 10", "B) 11"], gold="B")
+    assert result["pred"] == "B"
+    assert result["n_calls"] == 1
+
+
+def test_cot_reads_a_markdown_answer_line_and_ignores_option_mentions():
+    text = "The calculated value matches option (A).\n\n**Answer:** (A)"
+    client = ScriptedClient([text])
+    result = run_cot(client, question="Q", options=["A) 5", "B) 6"], gold="A")
+    assert result["pred"] == "A"
+    assert result["n_calls"] == 1
+
+
+def test_cot_reads_a_correct_option_line():
+    client = ScriptedClient(["The greatest value is 0.26.\n\nThe correct option is **(B)**."])
+    result = run_cot(client, question="Q", options=["A) 0.22", "B) 0.26"], gold="B")
+    assert result["pred"] == "B"
+    assert result["n_calls"] == 1
+
+
 def test_transport_error_is_not_scored_as_a_valid_miss():
     client = ScriptedClient([RuntimeError("timed out")])
     result = run_cot(client, question="Q", options=["A) 1", "B) 2"], gold="A")
@@ -160,6 +229,95 @@ def test_transport_error_is_not_scored_as_a_valid_miss():
     assert summary["n_valid"] == 0
     assert summary["accuracy_full"] == 0.0
     assert summary["failures"]["error"] == 1
+
+
+def test_direct_sees_options_and_returns_only_the_letter():
+    client = ScriptedClient([json.dumps({"answer": "C"})])
+    result = run_direct(
+        client,
+        question="How long?",
+        options=["A) 10", "B) 11", "C) 12"],
+        gold="C",
+    )
+    assert result["pred"] == "C"
+    assert result["n_calls"] == 1
+    assert "A) 10" in client.prompts[0]
+    assert "Reply with the option letter only." in client.prompts[0]
+
+
+def test_plan_and_solve_is_one_completion_and_reads_the_answer_line():
+    client = ScriptedClient(["Plan: divide distance by speed.\n\nAnswer: (A)"])
+    result = run_plan_and_solve(
+        client,
+        question="How long?",
+        options=["A) 10 hours", "B) 11 hours"],
+        gold="A",
+    )
+    assert result["n_calls"] == 1
+    assert result["pred"] == "A"
+    assert result["status"] == "ok"
+    assert client.kwargs[0]["max_tokens"] == 2048
+    prompt = client.prompts[0]
+    assert prompt.startswith("Q: How long? Answer Choices: (A) 10 hours (B) 11 hours")
+    assert "devise a plan to solve the problem" in prompt
+    assert "carry out the plan" in prompt
+    assert "reasoning" not in prompt
+
+
+def test_plan_and_solve_ignores_a_letter_that_is_only_in_the_plan():
+    client = ScriptedClient(["Step 1: compare option A with the distance. Step 2: still calculating"])
+    result = run_plan_and_solve(
+        client,
+        question="How long?",
+        options=["A) 10 hours", "B) 11 hours"],
+        gold="A",
+    )
+    assert result["pred"] == ""
+    assert result["status"] == "no_letter"
+    assert result["n_calls"] == 1
+
+
+def test_reflexion_revises_once_and_does_not_sample():
+    client = ScriptedClient(
+        [
+            json.dumps({"reasoning": "Maybe 10.", "answer": "A"}),
+            json.dumps({"critique": "The conclusion was 11.", "answer": "B"}),
+        ]
+    )
+    result = run_reflexion(
+        client,
+        question="How long?",
+        options=["A) 10", "B) 11"],
+        gold="B",
+    )
+    assert result["n_calls"] == 2
+    assert result["pred"] == "B"
+    assert len(client.prompts) == 2
+    assert "Previous attempt" in client.prompts[1]
+    assert "Maybe 10." in client.prompts[1]
+
+
+def test_reasoning_prompt_still_hides_the_direct_and_plan_context():
+    stem = "Shweta rides 15 km. How long for 100 km?"
+    options = ["A) 10 hours", "B) 11 hours"]
+    hidden = reasoning_prompt(stem)
+    shown = direct_prompt(stem, options)
+    planned = plan_solve_prompt(stem, options)
+    revised = reflexion_prompt(stem, options, "answer A")
+    assert "A) 10 hours" not in hidden
+    assert "A) 10 hours" in shown and "A) 10 hours" in planned and "A) 10 hours" in revised
+
+
+def test_experiment_methods_omit_confidence_reflection():
+    assert METHODS == (
+        "direct",
+        "cot",
+        "plan_and_solve",
+        "reflexion",
+        "decord_standard",
+    )
+    assert set(METHODS) <= set(RUNNERS)
+    assert "decord_confidence_reflection" in RUNNERS
 
 
 def test_archived_tables_stay_separate():

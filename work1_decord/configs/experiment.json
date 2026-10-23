@@ -1,0 +1,44 @@
+{
+  "models": [
+    {
+      "id": "qwen3.5-9b",
+      "extra_body": {"enable_thinking": false}
+    },
+    {
+      "id": "qwen3.5-27b",
+      "extra_body": {"enable_thinking": false}
+    },
+    {
+      "id": "deepseek-v3",
+      "extra_body": {}
+    },
+    {
+      "id": "gpt-4",
+      "extra_body": {}
+    }
+  ],
+  "methods": [
+    "direct",
+    "cot",
+    "plan_and_solve",
+    "reflexion",
+    "decord_standard"
+  ],
+  "temperature": 0.4,
+  "top_p": 1.0,
+  "max_tokens": 512,
+  "sample_k": 5,
+  "confidence_threshold": 0.5,
+  "request_timeout_s": 180,
+  "notes": {
+    "models": "qwen3.5-9b and qwen3.5-27b are the open Qwen3.5 checkpoints. deepseek-v3 and gpt-4 are the closed models. The id is the model string sent to the OpenAI-compatible endpoint. Order published tables by measured CoT accuracy.",
+    "thinking": "Both Qwen3.5 requests set enable_thinking to false, matching the 9B server that produced the saved logs. deepseek-v3 and gpt-4 have no thinking switch in this grid.",
+    "cot_max_tokens": "max_tokens 512 is the grid default. The CoT completion uses 2048 so the answer line is not cut off. Direct stays at 512.",
+    "prompting": "Zero-shot. No MMLU 5-shot dev items and no AQUA rationales.",
+    "plan_and_solve": "Wang et al. ACL 2023 replace the CoT trigger with one plan-and-solve sentence. The plan and the solution are the same completion. The letter uses the same answer-line rules as CoT, with no second call.",
+    "reflexion": "One coupled CoT call plus one critique. No sampling, no vote, no further retry.",
+    "decord": "This grid runs decord_standard only: one stem-only reasoning call and one option match. Confidence reflection is implemented and is not in methods.",
+    "scoring": "accuracy_full keeps failures in the denominator. MMLU category and overall scores are unweighted means of subject accuracies.",
+    "endpoint": "Set BASE_URL to the OpenAI-compatible root, including /v1, and API_KEY in the environment. The runner does not read a key from this file."
+  }
+}

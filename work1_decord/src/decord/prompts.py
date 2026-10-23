@@ -1,4 +1,7 @@
-"""Prompt templates for the three DecoRD agents and the CoT baseline.
+"""Prompt templates for DecoRD and the four coupled baselines.
+
+Every template is zero-shot. None of them includes a worked example, an MMLU
+dev item, or a field from ``meta`` (AQUA rationales, GAOKAO analysis).
 
 The wrapper matches the manuscript's agent template: a task line, instructions,
 and a JSON object that ``json.loads`` can read. The reasoning agent receives
@@ -98,12 +101,74 @@ def reflection_prompt(
     return _wrap("confidence reflection", instructions, schema, context)
 
 
-def cot_prompt(question: str, options: list[str]) -> str:
-    schema = {"reasoning": "", "answer": "A"}
+def direct_prompt(question: str, options: list[str]) -> str:
+    schema = {"answer": "A"}
     context = f"Question:\n{question.strip()}\n\nOptions:\n{_options_block(options)}"
     return _wrap(
         "multiple-choice solving",
-        "Let's think step by step. Then put the final option letter in answer.",
+        "Read the question and the options. Reply with the option letter only.",
         schema,
         context,
+    )
+
+
+def _answer_choices(options: list[str]) -> str:
+    choices: list[str] = []
+    for option in options:
+        text = str(option).strip()
+        if len(text) >= 2 and text[0] in "ABCDE" and text[1] == ")":
+            choices.append(f"({text[0]}) {text[2:].strip()}")
+        else:
+            choices.append(text)
+    return "Answer Choices: " + " ".join(choices)
+
+
+def plan_solve_prompt(question: str, options: list[str]) -> str:
+    """Zero-shot Plan-and-Solve trigger from Wang et al., ACL 2023.
+
+    The plan and the solution are one completion. The trigger replaces
+    ``Let's think step by step`` in the same ``Q:`` / ``A:`` frame as CoT.
+    """
+
+    return (
+        f"Q: {question.strip()} {_answer_choices(options)}\n"
+        "A: Let's first understand the problem and devise a plan to solve the problem. "
+        "Then, let's carry out the plan and solve the problem step by step."
+    )
+
+
+def reflexion_prompt(question: str, options: list[str], previous: str) -> str:
+    """One critique-and-revise call after a single coupled CoT attempt.
+
+    Shinn et al. (2023) retry until the attempt improves. This baseline stops
+    after this one revision: no extra sample and no vote.
+    """
+
+    schema = {"critique": "", "answer": "A"}
+    context = (
+        f"Question:\n{question.strip()}\n\n"
+        f"Options:\n{_options_block(options)}\n\n"
+        f"Previous attempt:\n{previous.strip()}"
+    )
+    return _wrap(
+        "answer reflection",
+        (
+            "Critique the previous attempt, correct a wrong option choice, "
+            "and put the revised option letter in answer."
+        ),
+        schema,
+        context,
+    )
+
+
+def cot_prompt(question: str, options: list[str]) -> str:
+    """Zero-shot CoT trigger from Kojima et al. 2022, with the options in the question.
+
+    The completion starts after ``Let's think step by step.`` There is no JSON
+    schema and no second call that fills in a missing letter.
+    """
+
+    return (
+        f"Q: {question.strip()} {_answer_choices(options)}\n"
+        "A: Let's think step by step."
     )
