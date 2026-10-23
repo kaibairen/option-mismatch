@@ -1,7 +1,7 @@
 """Zero-shot systems on one multiple-choice item.
 
 Coupled baselines see the stem and the options in every call: direct, CoT,
-Plan-and-Solve, and one-revision Reflexion. DecoRD reasoning sees the stem
+Plan-and-Solve, and Self-Refine. DecoRD reasoning sees the stem
 only; the decision and reflection calls see the options.
 """
 
@@ -19,10 +19,12 @@ from decord.prompts import (
     plan_solve_prompt,
     reasoning_prompt,
     reflection_prompt,
-    reflexion_prompt,
+    self_refine_feedback_prompt,
+    self_refine_refine_prompt,
 )
 
 COT_MAX_TOKENS = 2048
+SELF_REFINE_MAX_ITERATIONS = 4
 
 LETTERS = "ABCDE"
 
@@ -30,7 +32,7 @@ METHODS = (
     "direct",
     "cot",
     "plan_and_solve",
-    "reflexion",
+    "self_refine",
     "decord_standard",
 )
 
@@ -198,7 +200,37 @@ def run_plan_and_solve(
     }
 
 
-def run_reflexion(
+def _feedback_stops(text: str) -> bool:
+    """The released GSM runner stops when the feedback says the solution is correct."""
+
+    return "it is correct" in (text or "").lower()
+
+
+def _self_refine_result(
+    *,
+    solution: str,
+    error: str,
+    finish_reason: str,
+    gold: str,
+    trace: list[dict[str, str]],
+) -> dict[str, Any]:
+    letter = cot_answer_letter(solution) if solution and not error else ""
+    gold_letter = (gold or "").strip().upper()[:1]
+    return {
+        "method": "self_refine",
+        "status": _status_for(solution, error, letter),
+        "pred": letter,
+        "correct": bool(letter) and letter == gold_letter,
+        "reasoning_correct": None,
+        "error": error,
+        "finish_reason": finish_reason,
+        "n_calls": len(trace),
+        "trace": trace,
+        "raw": {"solution": solution, "trace": trace},
+    }
+
+
+def run_self_refine(
     client: ChatClient,
     *,
     question: str,
@@ -206,38 +238,68 @@ def run_reflexion(
     gold: str,
     config: GenerateConfig | None = None,
 ) -> dict[str, Any]:
-    """One coupled CoT attempt, then one critique. No further retry."""
+    """Self-Refine from Madaan et al., NeurIPS 2023, Algorithm 1.
 
-    settings = config or GenerateConfig()
-    first_text, first_error = _complete(client, cot_prompt(question, options), settings)
-    if first_error or not first_text.strip():
-        return {
-            "method": "reflexion",
-            "status": _status_for(first_text, first_error, ""),
-            "pred": "",
-            "correct": False,
-            "reasoning_correct": None,
-            "error": first_error,
-            "n_calls": 1,
-            "raw": {"cot": first_text},
-        }
-    revised_text, revised_error = _complete(
-        client,
-        reflexion_prompt(question, options, first_text),
-        settings,
+    The initial draft uses the same zero-shot CoT prompt as the CoT baseline.
+    Each iteration asks for feedback on the current draft, then rewrites it
+    with the full history. Feedback that says the draft is correct ends the
+    loop. Otherwise the loop stops after four iterations. The gold letter is
+    used only to score the last draft.
+    """
+
+    settings = _with_max_tokens(config or GenerateConfig(), COT_MAX_TOKENS)
+    trace: list[dict[str, str]] = []
+    history: list[tuple[str, str]] = []
+
+    def _call(step: str, prompt: str) -> tuple[str, str, str]:
+        text, error, finish_reason = _complete_meta(client, prompt, settings)
+        trace.append({"step": step, "response": text, "finish_reason": finish_reason})
+        return text, error, finish_reason
+
+    solution, error, finish_reason = _call("init", cot_prompt(question, options))
+    if error or not solution.strip():
+        return _self_refine_result(
+            solution=solution,
+            error=error,
+            finish_reason=finish_reason,
+            gold=gold,
+            trace=trace,
+        )
+    for index in range(SELF_REFINE_MAX_ITERATIONS):
+        feedback, feedback_error, feedback_finish = _call(
+            f"feedback_{index}",
+            self_refine_feedback_prompt(question, options, solution),
+        )
+        if feedback_error or not feedback.strip():
+            return _self_refine_result(
+                solution="",
+                error=feedback_error,
+                finish_reason=feedback_finish,
+                gold=gold,
+                trace=trace,
+            )
+        if _feedback_stops(feedback):
+            break
+        history.append((solution, feedback))
+        solution, error, finish_reason = _call(
+            f"refine_{index}",
+            self_refine_refine_prompt(question, options, history),
+        )
+        if error or not solution.strip():
+            return _self_refine_result(
+                solution="",
+                error=error,
+                finish_reason=finish_reason,
+                gold=gold,
+                trace=trace,
+            )
+    return _self_refine_result(
+        solution=solution,
+        error="",
+        finish_reason=finish_reason,
+        gold=gold,
+        trace=trace,
     )
-    letter = extract_letter(revised_text) if revised_text else ""
-    gold_letter = (gold or "").strip().upper()[:1]
-    return {
-        "method": "reflexion",
-        "status": _status_for(revised_text, revised_error, letter),
-        "pred": letter,
-        "correct": bool(letter) and letter == gold_letter,
-        "reasoning_correct": None,
-        "error": revised_error,
-        "n_calls": 2,
-        "raw": {"cot": first_text, "revision": revised_text},
-    }
 
 
 def _reason(client: ChatClient, question: str, config: GenerateConfig) -> tuple[str, str, str, str]:
@@ -366,7 +428,7 @@ RUNNERS = {
     "direct": run_direct,
     "cot": run_cot,
     "plan_and_solve": run_plan_and_solve,
-    "reflexion": run_reflexion,
+    "self_refine": run_self_refine,
     "decord_standard": run_standard,
     "decord_confidence_reflection": run_confidence_reflection,
 }

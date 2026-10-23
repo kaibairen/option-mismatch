@@ -12,10 +12,17 @@ from decord.pipeline import (
     run_cot,
     run_direct,
     run_plan_and_solve,
-    run_reflexion,
+    run_self_refine,
     run_standard,
 )
-from decord.prompts import decision_prompt, direct_prompt, plan_solve_prompt, reasoning_prompt, reflexion_prompt
+from decord.prompts import (
+    decision_prompt,
+    direct_prompt,
+    plan_solve_prompt,
+    reasoning_prompt,
+    self_refine_feedback_prompt,
+    self_refine_refine_prompt,
+)
 
 
 class ScriptedClient:
@@ -277,14 +284,15 @@ def test_plan_and_solve_ignores_a_letter_that_is_only_in_the_plan():
     assert result["n_calls"] == 1
 
 
-def test_reflexion_revises_once_and_does_not_sample():
+def test_self_refine_stops_when_the_feedback_says_the_draft_is_correct():
     client = ScriptedClient(
         [
-            json.dumps({"reasoning": "Maybe 10.", "answer": "A"}),
-            json.dumps({"critique": "The conclusion was 11.", "answer": "B"}),
+            "The distance is 11. The answer is B.",
+            "It is correct.",
+            "The answer is A.",
         ]
     )
-    result = run_reflexion(
+    result = run_self_refine(
         client,
         question="How long?",
         options=["A) 10", "B) 11"],
@@ -292,9 +300,60 @@ def test_reflexion_revises_once_and_does_not_sample():
     )
     assert result["n_calls"] == 2
     assert result["pred"] == "B"
+    assert result["status"] == "ok"
     assert len(client.prompts) == 2
-    assert "Previous attempt" in client.prompts[1]
-    assert "Maybe 10." in client.prompts[1]
+    assert client.prompts[0].rstrip().endswith("A: Let's think step by step.")
+    assert "The distance is 11." in client.prompts[1]
+    assert "It is correct." in client.prompts[1]
+    assert all(call["max_tokens"] == 2048 for call in client.kwargs)
+    assert all("gold" not in prompt.lower() for prompt in client.prompts)
+    assert [step["step"] for step in result["trace"]] == ["init", "feedback_0"]
+
+
+def test_self_refine_rewrites_with_history_and_stops_at_four_iterations():
+    replies = ["The answer is A."]
+    for _ in range(4):
+        replies.append("Step 2 subtracts the wrong quantity.")
+        replies.append("The answer is B.")
+    replies.append("this call must not be sent")
+    client = ScriptedClient(replies)
+    result = run_self_refine(
+        client,
+        question="How long?",
+        options=["A) 10", "B) 11"],
+        gold="B",
+    )
+    assert result["n_calls"] == 9
+    assert result["pred"] == "B"
+    assert client.replies == ["this call must not be sent"]
+    assert "Okay! Here is the rewrite:" in client.prompts[2]
+    assert "Step 2 subtracts the wrong quantity." in client.prompts[-1]
+    assert client.prompts[-1].count("Feedback:") == 4
+    assert "The answer is A." in client.prompts[-1]
+
+
+def test_self_refine_keeps_the_draft_when_the_second_feedback_stops():
+    client = ScriptedClient(
+        [
+            "The answer is A.",
+            "Step 2 subtracts the wrong quantity.",
+            "Recalculating gives 11. The answer is B.",
+            "It is correct.",
+        ]
+    )
+    result = run_self_refine(
+        client,
+        question="How long?",
+        options=["A) 10", "B) 11"],
+        gold="B",
+    )
+    assert result["n_calls"] == 4
+    assert result["pred"] == "B"
+    assert "The answer is A." in client.prompts[2]
+    assert "Step 2 subtracts the wrong quantity." in client.prompts[2]
+    assert "Recalculating gives 11." in client.prompts[3]
+    assert "The answer is A." not in client.prompts[3]
+    assert "Okay! Here is the rewrite:" not in client.prompts[3]
 
 
 def test_reasoning_prompt_still_hides_the_direct_and_plan_context():
@@ -303,9 +362,11 @@ def test_reasoning_prompt_still_hides_the_direct_and_plan_context():
     hidden = reasoning_prompt(stem)
     shown = direct_prompt(stem, options)
     planned = plan_solve_prompt(stem, options)
-    revised = reflexion_prompt(stem, options, "answer A")
+    feedback = self_refine_feedback_prompt(stem, options, "The answer is A.")
+    revised = self_refine_refine_prompt(stem, options, [("The answer is A.", "Step 2 is wrong.")])
     assert "A) 10 hours" not in hidden
-    assert "A) 10 hours" in shown and "A) 10 hours" in planned and "A) 10 hours" in revised
+    assert "A) 10 hours" in shown and "A) 10 hours" in planned
+    assert "A) 10 hours" in feedback and "A) 10 hours" in revised
 
 
 def test_experiment_methods_omit_confidence_reflection():
@@ -313,7 +374,7 @@ def test_experiment_methods_omit_confidence_reflection():
         "direct",
         "cot",
         "plan_and_solve",
-        "reflexion",
+        "self_refine",
         "decord_standard",
     )
     assert set(METHODS) <= set(RUNNERS)

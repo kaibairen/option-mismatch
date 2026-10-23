@@ -3,7 +3,8 @@
 Each line is ``{"question", "answer", "pred"}``. ``answer`` is the gold letter
 and ``pred`` is the letter returned by the method. When the runner captured the
 model text, the same line also keeps ``response`` and, when known,
-``finish_reason``. A call that raises, or a result whose status is ``error``,
+``finish_reason``. A multi-step method also keeps ``trace``, one entry per
+call. A call that raises, or a result whose status is ``error``,
 is left unwritten so the next run retries it. A trailing partial line from a
 crash is dropped before new rows are appended. Extra evidence fields are kept.
 """
@@ -29,12 +30,15 @@ def prediction_row(
     pred: str,
     response: str | None = None,
     finish_reason: str | None = None,
+    trace: list[dict[str, str]] | None = None,
 ) -> dict[str, Any]:
     row: dict[str, Any] = {"question": question, "answer": answer, "pred": pred}
     if response is not None:
         row["response"] = response
     if finish_reason:
         row["finish_reason"] = finish_reason
+    if trace:
+        row["trace"] = trace
     return row
 
 
@@ -42,7 +46,7 @@ def _response_text(result: dict[str, Any]) -> str | None:
     raw = result.get("raw") or {}
     if not isinstance(raw, dict):
         return None
-    for key in ("direct", "cot", "plan_solve", "revision", "decision", "reasoning"):
+    for key in ("solution", "direct", "cot", "plan_solve", "revision", "decision", "reasoning"):
         value = raw.get(key)
         if isinstance(value, str):
             return value
@@ -90,10 +94,18 @@ def append_prediction(
     pred: str,
     response: str | None = None,
     finish_reason: str | None = None,
+    trace: list[dict[str, str]] | None = None,
 ) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     line = json.dumps(
-        prediction_row(question, answer, pred, response=response, finish_reason=finish_reason),
+        prediction_row(
+            question,
+            answer,
+            pred,
+            response=response,
+            finish_reason=finish_reason,
+            trace=trace,
+        ),
         ensure_ascii=False,
     ) + "\n"
     with path.open("ab") as handle:
@@ -152,6 +164,7 @@ def run_letter_log(
             errors += 1
             print(f"{index}/{total} error {item.id} {result.get('error')}", file=sys.stderr)
             break
+        trace = result.get("trace")
         append_prediction(
             output,
             item.question,
@@ -159,6 +172,7 @@ def run_letter_log(
             str(result.get("pred") or ""),
             response=_response_text(result),
             finish_reason=str(result.get("finish_reason") or ""),
+            trace=trace if isinstance(trace, list) else None,
         )
         written += 1
         print(f"{index}/{total} saved", file=sys.stderr)

@@ -86,7 +86,7 @@ def test_locked_question_list_is_aqua_254_and_mmlu_40_per_subject():
     assert all(not hasattr(item, "meta") for item in items[:3])
 
 
-def test_dry_run_counts_seven_calls_without_confidence_reflection():
+def test_dry_run_counts_the_maximum_self_refine_calls():
     report = dry_run_report()
     assert report["n_items"] == 2534
     assert report["n_by_dataset"] == {"aqua_rat": 254, "mmlu": 2280}
@@ -97,10 +97,10 @@ def test_dry_run_counts_seven_calls_without_confidence_reflection():
         "direct": 1,
         "cot": 1,
         "plan_and_solve": 1,
-        "reflexion": 2,
+        "self_refine": 9,
         "decord_standard": 2,
     }
-    assert report["calls_per_model"] == 2534 * 7
+    assert report["calls_per_model"] == 2534 * 14
 
 
 def test_mmlu_overall_is_the_unweighted_mean_of_subjects():

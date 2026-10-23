@@ -37,6 +37,18 @@ def test_row_uses_question_answer_and_pred():
     }
 
 
+def test_trace_keeps_every_call(tmp_path: Path):
+    path = tmp_path / "self_refine.jsonl"
+    trace = [
+        {"step": "init", "response": "The answer is A.", "finish_reason": "stop"},
+        {"step": "feedback_0", "response": "It is correct.", "finish_reason": "stop"},
+    ]
+    append_prediction(path, "How long?", "A", "A", response="The answer is A.", finish_reason="stop", trace=trace)
+    reloaded = load_saved_rows(path)
+    assert reloaded[0]["response"] == "The answer is A."
+    assert reloaded[0]["trace"] == trace
+
+
 def test_partial_tail_is_dropped_and_completed_questions_are_skipped(tmp_path: Path):
     path = tmp_path / "aqua_direct.jsonl"
     append_prediction(path, "Question 0", "A", "D")
